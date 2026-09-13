@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { useRouter } from 'next/navigation';
 import { Stack, Group, Paper, Text, TextInput, Textarea, Tooltip } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -24,20 +26,14 @@ import { useStudents, useApplicationDraft, createId } from '@/lib/storage';
 import StudentModal from './StudentModal';
 import {
   APPLICATION_STEPS,
-  AGENT_MODELS,
-  DEFAULT_MODEL_ID,
   GUARDIAN_RELATIONS,
   countDays,
   formatDateRange,
   formatDateWithWeekday,
-  type AgentModelId,
-  type ApplicationDraft,
   type ApplicationStep,
-  type ChatMessage,
   type PlaceRegion,
   type PlaceSuggestion,
   type Student,
-  type ToolCall,
 } from '@/lib/types';
 import { searchPlaces } from '@/lib/places';
 import { parseDateExpression } from '@/lib/parse-date';
@@ -62,8 +58,26 @@ import {
   TOOLTIP_PROPS,
 } from '@/lib/theme';
 import AgentSidebar from './AgentSidebar';
+import {
+  agentModelCatalogSchema,
+  getApplicationPatches,
+  toApplicationDraftContext,
+  toDisplayMessages,
+  toUiMessages,
+  type AgentModelCatalog,
+} from '@/lib/agent/client';
 
 const TITLE_PLACEHOLDER = '제목 없는 신청서';
+const AGENT_CHAT_TRANSPORT = new DefaultChatTransport({
+  api: '/api/agent/chat',
+  prepareSendMessagesRequest: ({ messages, body }) => ({
+    body: {
+      messages,
+      draft: body?.draft,
+      model: body?.model,
+    },
+  }),
+});
 
 const REGION_OPTIONS: { id: PlaceRegion; label: string; icon: typeof IconMapPin }[] = [
   { id: 'domestic', label: '국내', icon: IconMapPin },
@@ -275,82 +289,26 @@ function StepProgress({
   );
 }
 
-const AGENT_REPLIES_WITH_STUDENTS = [
-  '네, 선택하신 학생 정보를 바탕으로 도와드릴게요. 다음 단계인 기간과 유형을 먼저 정해볼까요?',
-  '좋아요. 체험 목적을 한두 문장으로 정리해드릴게요. 어디로, 며칠간 다녀오시나요?',
-];
-
-const AGENT_REPLY_NO_STUDENTS =
-  '먼저 신청서를 작성할 학생을 선택해 주세요. 학생을 고르면 이어서 도와드릴게요.';
-
-function buildReasoningSteps(draft: ApplicationDraft, modelId: AgentModelId): string[] {
-  const stepLabel =
-    APPLICATION_STEPS.find((s) => s.key === draft.step)?.label ?? '신청서';
-
-  if (modelId === 'fast') {
-    const raw = [
-      `사용자가 '${stepLabel}' 단계에 있다. 화면 맥락부터 확인하자.`,
-      draft.destination !== ''
-        ? `장소는 ${draft.destination}. 견학·관람 계열 표현이 자연스럽다.`
-        : '장소가 아직 비어 있다. 장소를 전제로 한 문장은 피해야 한다.',
-      draft.startDate !== '' && draft.endDate !== ''
-        ? `기간은 ${draft.startDate} ~ ${draft.endDate}. 일자 수에 맞춰 활동을 배분해야 분량이 맞는다.`
-        : '기간이 없다. 일정 분량은 단정하지 말고 열어두자.',
-      draft.studentIds.length > 1
-        ? `학생이 ${draft.studentIds.length}명이다. 주어를 복수로 쓰고 개별 이름 반복은 줄이자.`
-        : '학생 1명 기준이라 단수 주어로 간다.',
-      '학교 제출 문서라 구어체와 감탄은 걷어내고, 목적-활동-기대효과 순서로 정리한다.',
-      '초안을 한 번 더 읽고 중복 표현을 정리한 뒤 답하자.',
-    ];
-    return raw;
-  }
-
-  const steps = [`'${stepLabel}' 단계 맥락을 확인했어요.`];
-  if (draft.destination !== '') {
-    steps.push(`장소가 ${draft.destination}이라 관련 표현을 골랐어요.`);
-  }
-  if (draft.startDate !== '' && draft.endDate !== '') {
-    steps.push('입력한 기간에 맞춰 일정 분량을 가늠했어요.');
-  }
-  if (draft.studentIds.length > 1) {
-    steps.push(`학생 ${draft.studentIds.length}명 기준으로 문장을 맞췄어요.`);
-  }
-  steps.push('학교 제출용 말투로 문장을 다듬었어요.');
-  return steps;
-}
-
-/** 사용자 문장에 등록된 장소 이름이 들어있으면 해당 PlaceSuggestion을 반환한다. */
-function findMentionedPlace(text: string): PlaceSuggestion | null {
-  const pools = [...searchPlaces('domestic', '', 100), ...searchPlaces('overseas', '', 100)];
-  const found = pools.find((place) => text.includes(place.name));
-  return found ?? null;
-}
-
-const WORDING_HELP_PATTERN = /다듬|정리해|문장.*(고쳐|손봐)/;
-
 export default function ApplicationEditor({ uuid }: { uuid: string }) {
   const router = useRouter();
   const [students, setStudents] = useStudents();
   const { draft, hydrated, saveState, update } = useApplicationDraft(uuid);
   const [studentModalOpened, { open: openStudentModal, close: closeStudentModal }] =
     useDisclosure(false);
-  const [thinking, setThinking] = useState(false);
-  const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
   const [thinkingElapsed, setThinkingElapsed] = useState(0);
-  const [pendingModelNotice, setPendingModelNotice] = useState<ChatMessage | null>(null);
+  const [agentCatalog, setAgentCatalog] = useState<AgentModelCatalog | null>(null);
+  const [agentCatalogError, setAgentCatalogError] = useState<string | null>(null);
   const [placeQuery, setPlaceQuery] = useState('');
   const [dateText, setDateText] = useState('');
   const [dateParseFailed, setDateParseFailed] = useState(false);
-  const replyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stepTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const clearThinkingTimers = () => {
-    if (replyTimerRef.current) clearTimeout(replyTimerRef.current);
-    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
-    stepTimersRef.current.forEach(clearTimeout);
-    stepTimersRef.current = [];
-  };
+  const restoredChatRef = useRef(false);
+  const savedMessagesRef = useRef('');
+  const appliedPatchIdsRef = useRef(new Set<string>());
+  const { clearError, error, messages, sendMessage, setMessages, status } = useChat({
+    transport: AGENT_CHAT_TRANSPORT,
+    throttle: 50,
+  });
+  const thinking = status === 'submitted' || status === 'streaming';
 
   const placeResults = searchPlaces(draft.placeRegion ?? 'domestic', placeQuery);
 
@@ -384,7 +342,78 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
     setDateText('');
   };
 
-  useEffect(() => clearThinkingTimers, []);
+  useEffect(() => {
+    if (!hydrated || restoredChatRef.current) return;
+
+    const savedMessages = toUiMessages(draft.messages);
+    savedMessagesRef.current = JSON.stringify(toDisplayMessages(savedMessages));
+    setMessages(savedMessages);
+    restoredChatRef.current = true;
+  }, [draft.messages, hydrated, setMessages]);
+
+  useEffect(() => {
+    if (!hydrated || !restoredChatRef.current) return;
+
+    const displayMessages = toDisplayMessages(messages);
+    const serialized = JSON.stringify(displayMessages);
+    if (serialized === savedMessagesRef.current) return;
+
+    savedMessagesRef.current = serialized;
+    update({ messages: displayMessages });
+  }, [hydrated, messages, update]);
+
+  useEffect(() => {
+    const patches = getApplicationPatches(messages).filter(
+      ({ id }) => !appliedPatchIdsRef.current.has(id)
+    );
+    if (patches.length === 0) return;
+
+    patches.forEach(({ id }) => appliedPatchIdsRef.current.add(id));
+    update(Object.assign({}, ...patches.map(({ patch }) => patch)));
+  }, [messages, update]);
+
+  useEffect(() => {
+    if (!thinking) return;
+
+    const timer = setInterval(() => setThinkingElapsed((seconds) => seconds + 1), 1_000);
+
+    return () => clearInterval(timer);
+  }, [thinking]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAgentCatalog() {
+      try {
+        const response = await fetch('/api/agent/models');
+        if (!response.ok) {
+          throw new Error('에이전트 모델 목록을 불러오지 못했어요.');
+        }
+
+        const parsed = agentModelCatalogSchema.safeParse(await response.json());
+        if (!parsed.success) {
+          throw new Error('에이전트 모델 목록 형식이 올바르지 않아요.');
+        }
+        if (cancelled) return;
+
+        setAgentCatalog(parsed.data);
+        setAgentCatalogError(null);
+        if (!parsed.data.models.some((model) => model.id === draft.modelId)) {
+          update({ modelId: parsed.data.defaultModelId });
+        }
+      } catch (cause) {
+        if (cancelled) return;
+        setAgentCatalogError(
+          cause instanceof Error ? cause.message : '에이전트 모델 목록을 불러오지 못했어요.'
+        );
+      }
+    }
+
+    void loadAgentCatalog();
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.modelId, update]);
 
   const handleAddStudent = (
     name: string,
@@ -485,121 +514,23 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
     update({ step: APPLICATION_STEPS[currentStepIndex + 1].key });
   };
 
-  const handleSend = (text: string) => {
-    if (thinking) return;
+  const handleSend = (text: string, files: File[]) => {
+    if (thinking || !agentCatalog || draft.modelId === '') return;
 
-    const startedAt = Date.now();
-    const userMessage: ChatMessage = {
-      id: createId(),
-      role: 'user',
-      content: text,
-      createdAt: startedAt,
-    };
-
-    const pendingNotice = pendingModelNotice;
-    const history = [
-      ...draft.messages,
-      ...(pendingNotice ? [pendingNotice] : []),
-      userMessage,
-    ];
-    setPendingModelNotice(null);
-
-    const toolCalls: ToolCall[] = [];
-    const draftPatch: Partial<ApplicationDraft> = { messages: history };
-
-    const parsedDate = parseDateExpression(text);
-    if (parsedDate) {
-      draftPatch.startDate = parsedDate.startDate;
-      draftPatch.endDate = parsedDate.endDate;
-      toolCalls.push({
-        id: createId(),
-        kind: 'tool',
-        name: '날짜 인식',
-        target: '기간',
-        detail: formatDateRange(parsedDate.startDate, parsedDate.endDate),
-        status: 'done',
-      });
-    }
-
-    const mentionedPlace = findMentionedPlace(text);
-    if (mentionedPlace) {
-      draftPatch.destination = mentionedPlace.name;
-      draftPatch.placeAddress = mentionedPlace.address;
-      toolCalls.push({
-        id: createId(),
-        kind: 'tool',
-        name: '장소 검색',
-        target: '장소',
-        detail: mentionedPlace.name,
-        status: 'done',
-      });
-    }
-
-    if (toolCalls.length === 0 && WORDING_HELP_PATTERN.test(text)) {
-      toolCalls.push({
-        id: createId(),
-        kind: 'skill',
-        name: '문장 다듬기',
-        status: 'done',
-      });
-    }
-
-    update(draftPatch);
-
-    const activeModelId = draft.modelId ?? DEFAULT_MODEL_ID;
-    const isRawThinking = activeModelId === 'fast';
-    const steps = buildReasoningSteps(draft, activeModelId);
-    setThinking(true);
-    setThinkingSteps([]);
+    clearError();
     setThinkingElapsed(0);
-
-    elapsedTimerRef.current = setInterval(() => {
-      setThinkingElapsed(Math.round((Date.now() - startedAt) / 1000));
-    }, 1000);
-
-    const stepInterval = isRawThinking ? 420 : 700;
-
-    steps.forEach((step, index) => {
-      const timer = setTimeout(
-        () => setThinkingSteps((prev) => [...prev, step]),
-        450 + index * stepInterval
-      );
-      stepTimersRef.current.push(timer);
-    });
-
-    const answered = history.filter((m) => m.role === 'agent').length;
-    const replyPool =
-      draft.studentIds.length > 0 ? AGENT_REPLIES_WITH_STUDENTS : [AGENT_REPLY_NO_STUDENTS];
-
-    replyTimerRef.current = setTimeout(() => {
-      const agentMessage: ChatMessage = {
-        id: createId(),
-        role: 'agent',
-        content: replyPool[answered % replyPool.length],
-        createdAt: Date.now(),
-        reasoning: steps,
-        reasoningRaw: isRawThinking,
-        thinkingSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-      };
-      update({ messages: [...history, agentMessage] });
-      clearThinkingTimers();
-      setThinking(false);
-      setThinkingSteps([]);
-    }, 450 + steps.length * stepInterval + 500);
+    const transfer = new DataTransfer();
+    files.forEach((file) => transfer.items.add(file));
+    void sendMessage(
+      files.length > 0 ? { text, files: transfer.files } : { text },
+      { body: { draft: toApplicationDraftContext(draft), model: draft.modelId } }
+    );
   };
 
-  const handleModelChange = (nextModelId: AgentModelId) => {
-    if (nextModelId === draft.modelId) return;
-
-    const label = AGENT_MODELS.find((m) => m.id === nextModelId)?.label ?? nextModelId;
+  const handleModelChange = (nextModelId: string) => {
+    if (nextModelId === draft.modelId || thinking) return;
+    clearError();
     update({ modelId: nextModelId });
-    setPendingModelNotice({
-      id: createId(),
-      role: 'system',
-      content: `모델을 '${label}'로 변경했어요`,
-      createdAt: Date.now(),
-    });
   };
 
   return (
@@ -1290,13 +1221,15 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
           }}
         >
           <AgentSidebar
-            messages={draft.messages}
-            onSend={handleSend}
-            modelId={draft.modelId ?? DEFAULT_MODEL_ID}
-            onModelChange={handleModelChange}
+            messages={toDisplayMessages(messages)}
+            onSendAction={handleSend}
+            models={agentCatalog?.models ?? []}
+            modelId={draft.modelId}
+            onModelChangeAction={handleModelChange}
             thinking={thinking}
-            thinkingSteps={thinkingSteps}
+            thinkingSteps={[]}
             thinkingElapsed={thinkingElapsed}
+            errorMessage={error?.message ?? agentCatalogError}
           />
         </Paper>
       </div>

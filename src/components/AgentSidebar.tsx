@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { Collapse, Group, Menu, Popover, Stack, Switch, Text, Textarea, Tooltip } from '@mantine/core';
+import { Collapse, Group, Menu, Popover, Stack, Switch, Text, Textarea, Tooltip, Transition } from '@mantine/core';
 import {
   IconSparkles,
   IconArrowUp,
@@ -17,10 +17,11 @@ import {
   IconBrain,
   IconTool,
   IconMapPin,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 import {
-  AGENT_MODELS,
   AGENT_NAME,
+  type AgentModel,
   type AgentModelId,
   type ChatMessage,
   type ToolCall,
@@ -61,7 +62,17 @@ const WRITING_OPTIONS = [
 
 type WritingOptionId = (typeof WRITING_OPTIONS)[number]['id'];
 
-type Attachment = { id: string; name: string; previewUrl: string | null };
+type Attachment = { id: string; name: string; previewUrl: string | null; file: File };
+
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENTS = 5;
+const SUPPORTED_ATTACHMENT_TYPES = new Set([
+  'application/pdf',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
 
 const ICON_BTN: CSSProperties = {
   width: 30,
@@ -76,6 +87,20 @@ const ICON_BTN: CSSProperties = {
   cursor: 'pointer',
   flexShrink: 0,
 };
+
+function getComposerError(error: string): { title: string; detail: string } {
+  if (error === 'An error occurred.') {
+    return {
+      title: '응답을 만들지 못했어요.',
+      detail: '잠시 후 다시 시도해 주세요.',
+    };
+  }
+
+  return {
+    title: '오류가 발생했어요.',
+    detail: error,
+  };
+}
 
 function ReasoningPanel({
   steps,
@@ -247,23 +272,28 @@ function ToolCallList({ calls }: { calls: ToolCall[] }) {
 
 export default function AgentSidebar({
   messages,
-  onSend,
+  onSendAction,
+  models,
   modelId,
-  onModelChange,
+  onModelChangeAction,
   thinking,
   thinkingSteps,
   thinkingElapsed,
+  errorMessage,
 }: {
   messages: ChatMessage[];
-  onSend: (text: string) => void;
+  onSendAction: (text: string, files: File[]) => void;
+  models: AgentModel[];
   modelId: AgentModelId;
-  onModelChange: (id: AgentModelId) => void;
+  onModelChangeAction: (id: AgentModelId) => void;
   thinking: boolean;
   thinkingSteps: string[];
   thinkingElapsed: number;
+  errorMessage: string | null;
 }) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [leavingIds, setLeavingIds] = useState<string[]>([]);
   const [optionsOpened, setOptionsOpened] = useState(false);
   const [options, setOptions] = useState<Record<WritingOptionId, boolean>>({
@@ -281,7 +311,9 @@ export default function AgentSidebar({
   }, [messages.length, thinking, thinkingSteps.length]);
 
   const trimmed = input.trim();
-  const activeModel = AGENT_MODELS.find((m) => m.id === modelId) ?? AGENT_MODELS[0];
+  const activeModel = models.find((model) => model.id === modelId) ?? null;
+  const canSend = (trimmed !== '' || attachments.length > 0) && !thinking && activeModel !== null;
+  const composerError = attachmentError ?? errorMessage;
 
   /** createObjectURL로 만든 URL은 명시적으로 해제해야 메모리에 남지 않는다. */
   const releasePreviews = (items: Attachment[]) => {
@@ -303,13 +335,41 @@ export default function AgentSidebar({
   };
 
   const handleSend = () => {
-    if (trimmed === '') return;
-    onSend(trimmed);
+    if (!canSend) return;
+    onSendAction(trimmed, attachments.map((attachment) => attachment.file));
     setInput('');
     setAttachments((prev) => {
       releasePreviews(prev);
       return [];
     });
+  };
+
+  const handleFiles = (files: File[]) => {
+    const supported = files.filter((file) => SUPPORTED_ATTACHMENT_TYPES.has(file.type));
+    const oversized = supported.some((file) => file.size > MAX_ATTACHMENT_BYTES);
+    const availableSlots = MAX_ATTACHMENTS - attachments.length;
+
+    if (supported.length !== files.length) {
+      setAttachmentError('PNG, JPEG, GIF, WebP 이미지와 PDF만 첨부할 수 있어요.');
+      return;
+    }
+    if (oversized) {
+      setAttachmentError('파일 하나의 크기는 5MB까지예요.');
+      return;
+    }
+    if (availableSlots <= 0 || supported.length > availableSlots) {
+      setAttachmentError(`파일은 최대 ${MAX_ATTACHMENTS}개까지 첨부할 수 있어요.`);
+      return;
+    }
+
+    const picked = supported.map((file) => ({
+      id: createId(),
+      name: file.name,
+      file,
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+    }));
+    setAttachmentError(null);
+    setAttachments((prev) => [...prev, ...picked]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -451,7 +511,8 @@ export default function AgentSidebar({
                   key={label}
                   type="button"
                   className="suggest-chip"
-                  onClick={() => onSend(label)}
+                  disabled={thinking || activeModel === null}
+                  onClick={() => onSendAction(label, [])}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -691,6 +752,40 @@ export default function AgentSidebar({
             </div>
           )}
 
+          <Transition mounted={composerError !== null} transition="fade" duration={160} timingFunction="ease">
+            {(styles) => {
+              const error = composerError ? getComposerError(composerError) : null;
+              return (
+                <div
+                  role="alert"
+                  className="fade-up"
+                  style={{
+                    ...styles,
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'flex-start',
+                    border: `1px solid ${DANGER}`,
+                    borderRadius: 8,
+                    backgroundColor: SURFACE_SOFT,
+                    color: DANGER,
+                    padding: '9px 10px',
+                    marginBottom: 10,
+                  }}
+                >
+                  <IconAlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <div>
+                    <Text fw={700} style={{ fontSize: 13, color: DANGER }}>
+                      {error?.title}
+                    </Text>
+                    <Text style={{ fontSize: 12, lineHeight: 1.45, color: LABEL_COLOR, marginTop: 2 }}>
+                      {error?.detail}
+                    </Text>
+                  </div>
+                </div>
+              );
+            }}
+          </Transition>
+
           <Textarea
             variant="unstyled"
             autosize
@@ -781,7 +876,8 @@ export default function AgentSidebar({
               <Menu.Target>
                 <button
                   type="button"
-                  aria-label={`모델 선택, 현재 ${activeModel.label}`}
+                  aria-label={`모델 선택, 현재 ${activeModel?.label ?? '준비 중'}`}
+                  disabled={thinking || models.length === 0}
                   className="ghost-btn"
                   style={{
                     display: 'inline-flex',
@@ -796,16 +892,16 @@ export default function AgentSidebar({
                     cursor: 'pointer',
                   }}
                 >
-                  {activeModel.label}
+                  {activeModel?.label ?? '모델 준비 중'}
                   <IconChevronDown size={14} color={SUB} />
                 </button>
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>모델</Menu.Label>
-                {AGENT_MODELS.map((model) => (
+                {models.map((model) => (
                   <Menu.Item
                     key={model.id}
-                    onClick={() => onModelChange(model.id)}
+                    onClick={() => onModelChangeAction(model.id)}
                     rightSection={
                       model.id === modelId ? <IconCheck size={14} color={DARK} /> : null
                     }
@@ -820,7 +916,7 @@ export default function AgentSidebar({
             <button
               type="button"
               onClick={handleSend}
-              disabled={trimmed === ''}
+              disabled={!canSend}
               aria-label="메시지 보내기"
               style={{
                 width: 32,
@@ -831,9 +927,9 @@ export default function AgentSidebar({
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                backgroundColor: trimmed === '' ? SURFACE_SOFT : DARK,
-                color: trimmed === '' ? '#adb5bd' : 'white',
-                cursor: trimmed === '' ? 'not-allowed' : 'pointer',
+                backgroundColor: canSend ? DARK : SURFACE_SOFT,
+                color: canSend ? 'white' : '#adb5bd',
+                cursor: canSend ? 'pointer' : 'not-allowed',
               }}
             >
               <IconArrowUp size={16} />
@@ -845,15 +941,10 @@ export default function AgentSidebar({
             type="file"
             multiple
             hidden
-            accept="image/*,.pdf,.hwp,.hwpx,.doc,.docx"
+            accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
             onChange={(e) => {
               const input = e.currentTarget;
-              const picked: Attachment[] = Array.from(input.files ?? []).map((file) => ({
-                id: createId(),
-                name: file.name,
-                previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-              }));
-              if (picked.length > 0) setAttachments((prev) => [...prev, ...picked]);
+              handleFiles(Array.from(input.files ?? []));
               input.value = '';
             }}
           />

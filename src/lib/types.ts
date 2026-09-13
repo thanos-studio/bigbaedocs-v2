@@ -70,19 +70,13 @@ export type ToolCall = {
 
 export const AGENT_NAME = '빅배';
 
-export type AgentModelId = 'balanced' | 'fast' | 'thorough';
+export type AgentModelId = string;
 
-export const AGENT_MODELS: {
-  id: AgentModelId;
-  label: string;
-  description: string;
-}[] = [
-  { id: 'balanced', label: '기본', description: '속도와 품질의 균형' },
-  { id: 'fast', label: '빠르게', description: '간단한 문장 정리에 적합' },
-  { id: 'thorough', label: '꼼꼼히', description: '긴 글을 정성껏 작성' },
-];
-
-export const DEFAULT_MODEL_ID: AgentModelId = 'balanced';
+export type AgentModel = {
+  readonly id: AgentModelId;
+  readonly label: string;
+  readonly description: string;
+};
 
 /** localStorage에 저장되는 신청서 초안 1건. */
 export type ApplicationDraft = {
@@ -158,7 +152,7 @@ export function createEmptyDraft(id: string): ApplicationDraft {
     guardianRelation: '',
     guardianPhone: '',
     messages: [],
-    modelId: DEFAULT_MODEL_ID,
+    modelId: '',
     createdAt: now,
     updatedAt: now,
   };
