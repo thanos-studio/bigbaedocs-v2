@@ -9,16 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.53",
+    "@ai-sdk/openai": "^4.0.66",
+    "@ai-sdk/openai-compatible": "^3.0.48",
+    "@ai-sdk/react": "^4.0.102",
     "@mantine/core": "^9.6.1",
     "@mantine/form": "^9.6.1",
     "@mantine/hooks": "^9.6.1",
     "@mantine/notifications": "^9.6.1",
     "@rhwp/core": "^0.8.6",
     "@tabler/icons-react": "^3.46.0",
+    "ai": "^7.0.99",
     "lottie-react": "^3.1.2",
     "next": "16.3.5",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.6.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
