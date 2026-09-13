@@ -1,26 +1,316 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-suit), sans-serif;
+}
+
+*, *::before, *::after {
+  border-style: solid;
+  border-color: transparent;
+}
+
+.hidden-mobile { display: flex !important; }
+.visible-mobile { display: none !important; }
+
+@media (max-width: 768px) {
+  .hidden-mobile { display: none !important; }
+  .visible-mobile { display: flex !important; }
+}
+
+.card-hover {
+  transition: box-shadow 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  border-color: #cbd5e1 !important;
+  transform: translateY(-1px);
+}
+
+button {
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, opacity 150ms ease;
+}
+button:hover:not(:disabled) {
+  opacity: 0.88;
+}
+button[data-outline]:hover:not(:disabled) {
+  background-color: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  opacity: 1;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  animation: fade-up 260ms ease both;
+}
+
+.student-chip {
+  transition: border-color 150ms ease, background-color 150ms ease, margin 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: grab;
+}
+.student-chip:active {
+  cursor: grabbing;
+}
+.student-chip:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+.student-chip button:hover {
+  background-color: #e5e7eb !important;
+  color: #374151 !important;
+  opacity: 1;
+}
+.dragging {
+  display: none;
+}
+
+.pick-chip {
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+}
+.pick-chip:hover:not([data-picked='true']) {
+  border-color: #adb5bd;
+  background-color: #e9edf1;
+}
+.pick-chip[data-picked='true'] {
+  border-color: #212529;
+  background-color: #212529;
+}
+
+@keyframes attach-in {
+  from { opacity: 0; transform: scale(0.86) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.attach-item {
+  animation: attach-in 200ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.attach-item[data-leaving='true'] {
+  opacity: 0;
+  transform: scale(0.82);
+  pointer-events: none;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.step-panel {
+  animation: step-in 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes brain-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+.brain-pulse {
+  animation: brain-pulse 1.3s ease-in-out infinite;
+}
+
+.reasoning-toggle {
+  transition: background-color 150ms ease;
+}
+.reasoning-toggle:hover {
+  background-color: #e2e6ea;
+  opacity: 1;
+}
+
+@keyframes tool-run-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+.tool-run-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #495057;
+  animation: tool-run-pulse 1s ease-in-out infinite;
+}
+
+@keyframes onboard-step-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.onboard-step {
+  animation: onboard-step-in 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.place-result {
+  transition: background-color 150ms ease, border-color 150ms ease;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+}
+.place-result:hover {
+  background-color: #e9edf1;
+  border-color: #adb5bd;
+  opacity: 1;
+}
+.place-result:active {
+  background-color: #dde3e9;
+}
+
+.ghost-btn {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.ghost-btn:hover:not(:disabled) {
+  background-color: #e2e6ea !important;
+  color: #374151 !important;
+  opacity: 1;
+}
+.ghost-btn:active:not(:disabled) {
+  background-color: #d3d9df !important;
+}
+.ghost-btn[data-active='true'] {
+  background-color: #dde3e9 !important;
+  color: #212529 !important;
+}
+
+.draft-title {
+  transition: border-color 150ms ease;
+}
+.draft-title:hover {
+  border-bottom-color: #cbd5e1 !important;
+  opacity: 1;
+}
+
+.agent-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+.agent-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.agent-scroll::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+.agent-scroll::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.suggest-chip {
+  transition: border-color 150ms ease, background-color 150ms ease;
+  cursor: pointer;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+}
+.suggest-chip:hover {
+  border-color: #adb5bd;
+  background-color: #e9edf1;
+  opacity: 1;
+}
+.suggest-chip:active {
+  background-color: #dde3e9;
+}
+
+.agent-composer {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.agent-composer:focus-within {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.14);
+}
+
+@keyframes chip-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+.chip-danger {
+  animation: chip-shake 220ms ease-in-out infinite;
+  border-color: #e03131 !important;
+  background-color: #fff5f5 !important;
+  color: #e03131 !important;
+}
+.chip-danger * {
+  color: #e03131 !important;
+}
+
+@keyframes nudge-shake {
+  0%, 100% { transform: scale(1.08) rotate(0); }
+  30% { transform: scale(1.08) rotate(-2.5deg); }
+  70% { transform: scale(1.08) rotate(2.5deg); }
+}
+.nudge-hover {
+  transition: transform 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+.nudge-hover:hover:not(:disabled) {
+  animation: nudge-shake 260ms ease-in-out infinite;
+  opacity: 1;
+}
+
+.tab-btn {
+  transition: color 200ms ease, background-color 150ms ease;
+  border-radius: 18px;
+}
+.tab-btn[data-active='false']:hover {
+  background-color: rgba(33, 37, 41, 0.06);
+  color: #212529 !important;
+  opacity: 1;
+}
+
+.student-chip:hover:not(.chip-danger) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.student-chip {
+  will-change: transform;
+}
+
+.text-btn {
+  transition: background-color 150ms ease, color 150ms ease;
+  border-radius: 6px;
+}
+.text-btn:hover:not(:disabled) {
+  background-color: rgba(33, 37, 41, 0.06);
+  color: #212529 !important;
+  opacity: 1;
+}
+
+.danger-btn {
+  transition: background-color 150ms ease;
+  border-radius: 6px;
+}
+.danger-btn:hover:not(:disabled) {
+  background-color: #ffe3e3;
+  opacity: 1;
+}
+
+.solid-btn {
+  transition: transform 150ms ease, background-color 150ms ease, opacity 150ms ease;
+}
+.solid-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  opacity: 1;
+  filter: brightness(1.12);
+}
+.solid-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes vt-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+::view-transition-old(root) {
+  animation: vt-fade-out 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+::view-transition-new(root) {
+  animation: vt-fade-in 260ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
