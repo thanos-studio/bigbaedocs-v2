@@ -1,0 +1,16 @@
+.git
+.gitignore
+.next
+node_modules
+npm-debug.log*
+.env*
+!.env.example
+.DS_Store
+*.tsbuildinfo
+coverage
+.vercel
+.omo
+.playwright-mcp
+public/rhwp_bg.wasm
+Dockerfile
+.dockerignore
