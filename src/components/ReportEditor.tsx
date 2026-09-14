@@ -52,7 +52,7 @@ import {
   LABEL_COLOR,
   TOOLTIP_PROPS,
 } from '@/lib/theme';
-import { FAINT, FZ, RAW } from '@/lib/graphite/theme';
+import { FAINT, FZ, R, RAW } from '@/lib/graphite/theme';
 import { Button, buttonIconSize } from '@/lib/graphite/components';
 import AgentSidebar, { type WritingOptionState } from './AgentSidebar';
 import {

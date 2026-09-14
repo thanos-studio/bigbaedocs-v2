@@ -5,7 +5,7 @@ import { Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { IconCheck, IconCopy, IconLink, IconLoader2, IconShare2 } from '@tabler/icons-react';
 
 import { Button } from '@/lib/graphite/components';
-import { FZ } from '@/lib/graphite/theme';
+import { FZ, R } from '@/lib/graphite/theme';
 import { shareCreateResponseSchema, type SharePayload } from '@/lib/share';
 import { BORDER, DANGER, DONE_COLOR, LABEL_COLOR, SUB, SURFACE_SOFT, TEXT } from '@/lib/theme';
 

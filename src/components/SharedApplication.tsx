@@ -18,7 +18,7 @@ import {
 import BrandMark from './BrandMark';
 import { HwpxViewer } from './HwpxViewer';
 import { Button } from '@/lib/graphite/components';
-import { FZ } from '@/lib/graphite/theme';
+import { FZ, R } from '@/lib/graphite/theme';
 import { shareReadResponseSchema, type SharePayload } from '@/lib/share';
 import { createId, useDrafts, useStudents } from '@/lib/storage';
 import {
@@ -357,7 +357,7 @@ export default function SharedApplication({ id }: { id: string }) {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
-                        borderRadius: 20,
+                        borderRadius: R.pill,
                         padding: '7px 14px',
                         fontSize: 13,
                         fontWeight: 500,
@@ -409,7 +409,7 @@ export default function SharedApplication({ id }: { id: string }) {
                     {entries.map((entry, index) => (
                       <div
                         key={index}
-                        style={{ border: `1px solid ${BORDER}`, borderRadius: 10, padding: 16 }}
+                        style={{ border: `1px solid ${BORDER}`, borderRadius: R.md, padding: 16 }}
                       >
                         {entries.length > 1 && (
                           <Text style={{ fontSize: 13, color: SUB, marginBottom: 12 }}>
@@ -443,7 +443,7 @@ export default function SharedApplication({ id }: { id: string }) {
                                     className="pick-chip"
                                     data-picked={picked}
                                     style={{
-                                      borderRadius: 20,
+                                      borderRadius: R.pill,
                                       padding: '6px 13px',
                                       fontSize: 13,
                                       cursor: 'pointer',
@@ -464,7 +464,7 @@ export default function SharedApplication({ id }: { id: string }) {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: 5,
-                                  borderRadius: 20,
+                                  borderRadius: R.pill,
                                   padding: '6px 13px',
                                   fontSize: 13,
                                   cursor: 'pointer',
@@ -687,7 +687,7 @@ function ModeButton({
         gap: 12,
         width: '100%',
         padding: '14px 15px',
-        borderRadius: 10,
+        borderRadius: R.md,
         cursor: 'pointer',
         textAlign: 'left',
       }}

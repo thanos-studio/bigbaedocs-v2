@@ -37,7 +37,7 @@ import SettingsModal from './SettingsModal';
 import { createId, useDrafts, useStudents } from '@/lib/storage';
 import { createEmptyDraft, toTrip, type Student, type Trip } from '@/lib/types';
 import { Button } from '@/lib/graphite/components';
-import { BORDER_HOVER, RAW, FZ, SHADOW } from '@/lib/graphite/theme';
+import { BORDER_HOVER, R, RAW, FZ, SHADOW } from '@/lib/graphite/theme';
 import {
   TEXT,
   DANGER,

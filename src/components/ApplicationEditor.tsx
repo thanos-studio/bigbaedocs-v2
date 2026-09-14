@@ -1925,9 +1925,11 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                     icon={IconFileText}
                     title="문서"
                     description={
-                      documents.length > 1
-                        ? `학생 ${documents.length}명의 신청서를 각각 만들었어요.`
-                        : '신청서가 만들어졌어요. 내려받아 확인하세요.'
+                      documents.length === 0
+                        ? '신청서를 다시 만들어 주세요.'
+                        : documents.length > 1
+                          ? `학생 ${documents.length}명의 신청서를 각각 만들었어요.`
+                          : '신청서가 만들어졌어요. 내려받아 확인하세요.'
                     }
                   />
 
@@ -2108,7 +2110,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                   <span />
                 )}
                 {isLastStep ? (
-                  <Button variant="solid" onClick={openDone} leftIcon={<IconCheck size={16} stroke={2.5} />}>
+                  <Button variant="solid" onClick={openDone} disabled={documents.length === 0} leftIcon={<IconCheck size={16} stroke={2.5} />}>
                     완료
                   </Button>
                 ) : (

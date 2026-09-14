@@ -5,7 +5,7 @@ import { Group, Text, Tooltip } from '@mantine/core';
 import { IconChevronLeft, IconChevronRight, IconLoader2 } from '@tabler/icons-react';
 
 import { BORDER, SUB, TEXT, TOOLTIP_PROPS } from '@/lib/theme';
-import { HOVER, SHADOW } from '@/lib/graphite/theme';
+import { HOVER, R, SHADOW } from '@/lib/graphite/theme';
 import { renderHwpxPages } from '@/lib/hwpx-render';
 
 const PAGE_BTN: CSSProperties = {
