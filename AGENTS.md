@@ -22,3 +22,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 스타일 토큰은 `src/lib/theme.ts`에서 가져온다. hex를 새로 박지 않는다.
 - 인라인 `style`이 CSS 클래스를 이기므로, 상태별 색은 클래스에 두고 인라인에서 같은 속성을 중복 지정하지 않는다.
 
+
+# HWPX 문서 (rhwp)
+
+- `@rhwp/core`에는 PDF export가 없다. PDF는 `renderPageSvg()` 결과를 새 창에 그려 브라우저 인쇄로 저장한다.
+- 뷰어용 wasm은 `scripts/copy-wasm.mjs`가 `public/rhwp_bg.wasm`으로 복사한다(dev/build/postinstall에 연결됨). 이 파일은 gitignore.
+- 렌더 전에 `globalThis.measureTextWidth`를 등록해야 한다. 안 하면 줄바꿈이 조용히 깨진다.
+- 서버(Node)에서도 `HwpDocument`와 `renderPageSvg`가 동작한다. wasm 바이트를 직접 읽어 `init`에 넘겨야 한다.
+- 내보낸 SVG는 자기 `width`/`height`를 들고 있어 부모 크기를 무시한다. `.hwpx-page > svg { width: 100% }`로 맞춘다.
+- `.fade-up` 같은 애니메이션 클래스의 `transform`이 인라인 `scale()`을 덮어쓴다. 크기 맞춤은 `transform` 대신 `aspect-ratio`를 쓴다.
+- 국내 여행은 동행 보호자 칸(`{17}`~`{19}`)을 비운다. 해외일 때만 채운다.
