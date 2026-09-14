@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { remarkLooseBold } from '@/lib/remark-loose-bold';
 import { Collapse, Group, Menu, Popover, Stack, Switch, Text, Textarea, Tooltip, Transition } from '@mantine/core';
 import {
   IconSparkles,
@@ -18,11 +21,16 @@ import {
   IconTool,
   IconMapPin,
   IconAlertCircle,
+  IconBolt,
+  IconHelpCircle,
+  IconArrowRightBar,
+  IconPencil,
 } from '@tabler/icons-react';
 import {
   AGENT_NAME,
   type AgentModel,
   type AgentModelId,
+  type ChatAttachment,
   type ChatMessage,
   type ToolCall,
 } from '@/lib/types';
@@ -36,23 +44,57 @@ import {
   TOOLTIP_PROPS,
   DONE_COLOR,
   DANGER,
+  BTN_PRIMARY,
 } from '@/lib/theme';
 import { createId } from '@/lib/storage';
 
-const SUGGESTIONS = [
-  { label: '다음 주 금요일부터 2박 3일 제주도', icon: IconCalendarEvent },
-  { label: '경복궁으로 견학 신청서 써줘', icon: IconMapPin },
-  { label: '이 내용으로 문장 다듬어줘', icon: IconSparkles },
-];
+export type AgentVariant = 'application' | 'report';
 
-const ONBOARD_STEPS = [
-  {
-    label: '체험 내용을 자유롭게 말해주세요',
-    example: '예: "다음 주 금요일에 제주도 3일 다녀와요"',
+type OnboardStep = { label: string; example?: string };
+
+type VariantCopy = {
+  role: string;
+  headline: string;
+  suggestions: { label: string; icon: typeof IconSparkles }[];
+  onboardSteps: OnboardStep[];
+};
+
+const VARIANT_COPY: Record<AgentVariant, VariantCopy> = {
+  application: {
+    role: '신청서 작성 도우미',
+    headline: '말로 설명하면 신청서를 채워드려요',
+    suggestions: [
+      { label: '다음 주 금요일부터 2박 3일 제주도', icon: IconCalendarEvent },
+      { label: '경복궁으로 견학 신청서 써줘', icon: IconMapPin },
+      { label: '이 내용으로 문장 다듬어줘', icon: IconSparkles },
+    ],
+    onboardSteps: [
+      {
+        label: '체험 내용을 자유롭게 말해주세요',
+        example: '예: "다음 주 금요일에 제주도 3일 다녀와요"',
+      },
+      { label: 'AI가 날짜·장소·목적을 채워요' },
+      { label: '왼쪽에서 확인하고 고치면 끝' },
+    ],
   },
-  { label: 'AI가 날짜·장소·목적을 채워요' },
-  { label: '왼쪽에서 확인하고 고치면 끝' },
-];
+  report: {
+    role: '보고서 작성 도우미',
+    headline: '다녀온 이야기를 하면 보고서를 채워드려요',
+    suggestions: [
+      { label: '경복궁 다녀왔어요', icon: IconMapPin },
+      { label: '보고서 다 써줘', icon: IconSparkles },
+      { label: '이 내용으로 문장 다듬어줘', icon: IconTextWrap },
+    ],
+    onboardSteps: [
+      {
+        label: '무엇을 하고 왔는지 말해주세요',
+        example: '예: "근정전이랑 박물관 보고 왔어요"',
+      },
+      { label: 'AI가 체험내용과 느낀 점을 써요' },
+      { label: '왼쪽에서 확인하고 고치면 끝' },
+    ],
+  },
+};
 
 const WRITING_OPTIONS = [
   { id: 'formalTone', label: '공문서 말투로 작성', icon: IconSchool },
@@ -61,6 +103,8 @@ const WRITING_OPTIONS = [
 ] as const;
 
 type WritingOptionId = (typeof WRITING_OPTIONS)[number]['id'];
+
+export type WritingOptionState = Record<WritingOptionId, boolean> & { turbo: boolean };
 
 type Attachment = { id: string; name: string; previewUrl: string | null; file: File };
 
@@ -73,6 +117,8 @@ const SUPPORTED_ATTACHMENT_TYPES = new Set([
   'image/png',
   'image/webp',
 ]);
+
+const ANSWER_ROW_HEIGHT = 38;
 
 const ICON_BTN: CSSProperties = {
   width: 30,
@@ -134,7 +180,6 @@ function ReasoningPanel({
           gap: 7,
           width: '100%',
           border: 'none',
-          background: 'none',
           cursor: 'pointer',
           padding: '9px 12px',
           textAlign: 'left',
@@ -197,8 +242,307 @@ function ReasoningPanel({
   );
 }
 
+function MessageAttachments({
+  attachments,
+  align,
+}: {
+  attachments: ChatAttachment[];
+  align: 'flex-end' | 'flex-start';
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 6,
+        justifyContent: align,
+        maxWidth: '85%',
+      }}
+    >
+      {attachments.map((attachment) =>
+        attachment.mediaType.startsWith('image/') ? (
+          <img
+            key={attachment.id}
+            src={attachment.url}
+            alt={attachment.name}
+            style={{
+              width: 108,
+              height: 108,
+              objectFit: 'cover',
+              borderRadius: 10,
+              border: `1px solid ${BORDER}`,
+              display: 'block',
+            }}
+          />
+        ) : (
+          <div
+            key={attachment.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              maxWidth: 200,
+              padding: '8px 10px',
+              borderRadius: 10,
+              border: `1px solid ${BORDER}`,
+              backgroundColor: 'white',
+            }}
+          >
+            <IconPaperclip size={14} color={SUB} style={{ flexShrink: 0 }} />
+            <Text
+              style={{
+                fontSize: 13,
+                color: LABEL_COLOR,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {attachment.name}
+            </Text>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+function QuestionCard({
+  call,
+  onAnswerAction,
+  disabled,
+}: {
+  call: ToolCall;
+  onAnswerAction: (answer: string) => void;
+  disabled: boolean;
+}) {
+  const [draftAnswer, setDraftAnswer] = useState('');
+  const candidates = call.candidates ?? [];
+  const choices = call.choices ?? [];
+  const trimmedAnswer = draftAnswer.trim();
+  const [customOpen, setCustomOpen] = useState(choices.length === 0);
+  const customRef = useRef<HTMLTextAreaElement>(null);
+
+  const submitFreeText = () => {
+    if (disabled || trimmedAnswer === '') return;
+    onAnswerAction(trimmedAnswer);
+    setDraftAnswer('');
+  };
+
+  const openCustom = () => {
+    setCustomOpen(true);
+    // Collapse가 펼쳐진 뒤에 포커스를 줘야 스크롤이 튀지 않는다.
+    requestAnimationFrame(() => customRef.current?.focus());
+  };
+
+  return (
+    <div
+      className="fade-up"
+      style={{
+        maxWidth: '92%',
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        backgroundColor: 'white',
+        padding: '13px 14px',
+      }}
+    >
+      <Group gap={7} wrap="nowrap" align="flex-start" mb={11}>
+        <IconHelpCircle size={15} color={SUB} style={{ flexShrink: 0, marginTop: 2 }} />
+        <Text style={{ fontSize: 14, lineHeight: 1.5, color: TEXT, flex: 1 }}>
+          {call.detail ?? '추가 정보가 필요해요.'}
+        </Text>
+      </Group>
+
+      {candidates.length > 0 && (
+        <Stack gap={6}>
+          {candidates.map((candidate) => (
+            <button
+              key={`${candidate.name}-${candidate.address}`}
+              type="button"
+              disabled={disabled}
+              onClick={() => onAnswerAction(`${candidate.name} (${candidate.address})`)}
+              className="answer-chip"
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: '9px 12px',
+                borderRadius: 8,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <Text style={{ fontSize: 14, color: TEXT, fontWeight: 500 }}>
+                {candidate.name}
+              </Text>
+              <Text style={{ fontSize: 13, color: SUB, marginTop: 2 }}>
+                {candidate.address}
+              </Text>
+            </button>
+          ))}
+        </Stack>
+      )}
+
+      {choices.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {choices.map((choice) => (
+            <button
+              key={choice}
+              type="button"
+              disabled={disabled}
+              onClick={() => onAnswerAction(choice)}
+              className="answer-chip"
+              style={{
+                fontSize: 13,
+                padding: '7px 13px',
+                borderRadius: 8,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                color: LABEL_COLOR,
+                textAlign: 'left',
+                lineHeight: 1.5,
+              }}
+            >
+              {choice}
+            </button>
+          ))}
+
+          <Transition mounted={!customOpen} transition="fade" duration={140}>
+            {(styles) => (
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={openCustom}
+                className="suggest-chip"
+                style={{
+                  ...styles,
+                  fontSize: 13,
+                  padding: '7px 13px',
+                  borderRadius: 8,
+                  border: `1px dashed ${BORDER}`,
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  color: SUB,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <IconPencil size={13} />
+                직접 입력
+              </button>
+            )}
+          </Transition>
+        </div>
+      )}
+
+      <Collapse expanded={customOpen} transitionDuration={200}>
+        <div style={{ marginTop: choices.length > 0 ? 8 : 0 }}>
+          <Textarea
+            ref={customRef}
+            autosize
+            minRows={1}
+            maxRows={3}
+            value={draftAnswer}
+            onChange={(e) => setDraftAnswer(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                submitFreeText();
+              }
+            }}
+            disabled={disabled}
+            placeholder={call.placeholder ?? '직접 입력할게요'}
+            aria-label={call.detail ?? '답변 입력'}
+            styles={{ input: { fontSize: 14, color: TEXT, minHeight: ANSWER_ROW_HEIGHT } }}
+          />
+          <Group justify="flex-end" mt={8}>
+            <button
+              type="button"
+              onClick={submitFreeText}
+              disabled={disabled || trimmedAnswer === ''}
+              aria-label="답변 보내기"
+              className="solid-btn"
+              style={{
+                ...BTN_PRIMARY,
+                height: ANSWER_ROW_HEIGHT,
+                padding: '0 15px',
+                opacity: disabled || trimmedAnswer === '' ? 0.45 : 1,
+                cursor: disabled || trimmedAnswer === '' ? 'not-allowed' : 'pointer',
+              }}
+            >
+              확인
+            </button>
+          </Group>
+        </div>
+      </Collapse>
+    </div>
+  );
+}
+
+function ThinkingPanel({
+  steps,
+  elapsed,
+  raw,
+}: {
+  steps: string[];
+  elapsed: number;
+  raw: boolean;
+}) {
+  return (
+    <div
+      className="fade-up"
+      style={{
+        maxWidth: '92%',
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        backgroundColor: SURFACE_SOFT,
+        padding: '10px 12px',
+      }}
+    >
+      <Group gap={7} wrap="nowrap">
+        <IconBrain size={15} color={SUB} className="brain-pulse" />
+        <Text fw={600} style={{ fontSize: 13, color: LABEL_COLOR }}>
+          생각 중
+        </Text>
+        <Text style={{ fontSize: 12, color: SUB }}>{elapsed}초</Text>
+      </Group>
+
+      {steps.length > 0 &&
+        (raw ? (
+          <Text
+            className="fade-up"
+            style={{ fontSize: 12, lineHeight: 1.75, color: SUB, marginTop: 9 }}
+          >
+            {steps.join(' ')}
+          </Text>
+        ) : (
+          <Stack gap={4} mt={9}>
+            {steps.map((step, index) => (
+              <Text
+                key={`${step}-${index}`}
+                className="fade-up"
+                style={{
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  color: index === steps.length - 1 ? LABEL_COLOR : SUB,
+                }}
+              >
+                {step}
+              </Text>
+            ))}
+          </Stack>
+        ))}
+    </div>
+  );
+}
+
+const TOOL_ICONS = {
+  skill: IconSparkles,
+  navigate: IconArrowRightBar,
+  question: IconHelpCircle,
+  tool: IconTool,
+} as const;
+
 function ToolCallRow({ call, isLast }: { call: ToolCall; isLast: boolean }) {
-  const Icon = call.kind === 'skill' ? IconSparkles : IconTool;
+  const Icon = TOOL_ICONS[call.kind];
 
   return (
     <div
@@ -233,11 +577,34 @@ function ToolCallRow({ call, isLast }: { call: ToolCall; isLast: boolean }) {
             {call.name}
           </Text>
           {call.target && (
-            <Text style={{ fontSize: 12, color: SUB }}>→ {call.target}</Text>
+            <Text style={{ fontSize: 13, color: SUB }}>→ {call.target}</Text>
           )}
         </div>
+
+        {call.fields && call.fields.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+            {call.fields.map((field) => (
+              <span
+                key={field}
+                style={{
+                  fontSize: 12,
+                  color: SUB,
+                  padding: '2px 7px',
+                  borderRadius: 5,
+                  backgroundColor: 'white',
+                  border: `1px solid ${BORDER}`,
+                }}
+              >
+                {field}
+              </span>
+            ))}
+          </div>
+        )}
+
         {call.detail && (
-          <Text style={{ fontSize: 12, color: SUB, marginTop: 2 }}>{call.detail}</Text>
+          <Text style={{ fontSize: 13, lineHeight: 1.5, color: SUB, marginTop: 3 }}>
+            {call.detail}
+          </Text>
         )}
       </div>
 
@@ -251,7 +618,8 @@ function ToolCallRow({ call, isLast }: { call: ToolCall; isLast: boolean }) {
 }
 
 function ToolCallList({ calls }: { calls: ToolCall[] }) {
-  if (calls.length === 0) return null;
+  const visible = calls.filter((call) => call.kind !== 'question');
+  if (visible.length === 0) return null;
 
   return (
     <div
@@ -263,8 +631,8 @@ function ToolCallList({ calls }: { calls: ToolCall[] }) {
         overflow: 'hidden',
       }}
     >
-      {calls.map((call, index) => (
-        <ToolCallRow key={call.id} call={call} isLast={index === calls.length - 1} />
+      {visible.map((call, index) => (
+        <ToolCallRow key={call.id} call={call} isLast={index === visible.length - 1} />
       ))}
     </div>
   );
@@ -280,9 +648,10 @@ export default function AgentSidebar({
   thinkingSteps,
   thinkingElapsed,
   errorMessage,
+  variant = 'application',
 }: {
   messages: ChatMessage[];
-  onSendAction: (text: string, files: File[]) => void;
+  onSendAction: (text: string, files: File[], options: WritingOptionState) => void;
   models: AgentModel[];
   modelId: AgentModelId;
   onModelChangeAction: (id: AgentModelId) => void;
@@ -290,12 +659,14 @@ export default function AgentSidebar({
   thinkingSteps: string[];
   thinkingElapsed: number;
   errorMessage: string | null;
+  variant?: AgentVariant;
 }) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [leavingIds, setLeavingIds] = useState<string[]>([]);
   const [optionsOpened, setOptionsOpened] = useState(false);
+  const [turbo, setTurbo] = useState(false);
   const [options, setOptions] = useState<Record<WritingOptionId, boolean>>({
     formalTone: true,
     autoFill: true,
@@ -310,10 +681,28 @@ export default function AgentSidebar({
     el.scrollTop = el.scrollHeight;
   }, [messages.length, thinking, thinkingSteps.length]);
 
+  const copy = VARIANT_COPY[variant];
   const trimmed = input.trim();
   const activeModel = models.find((model) => model.id === modelId) ?? null;
   const canSend = (trimmed !== '' || attachments.length > 0) && !thinking && activeModel !== null;
   const composerError = attachmentError ?? errorMessage;
+
+  const lastMessage = messages.at(-1);
+  const pendingQuestion =
+    lastMessage?.role === 'agent' && !thinking
+      ? lastMessage.toolCalls?.findLast(
+          (call) =>
+            call.kind === 'question' &&
+            (call.freeText === true ||
+              (call.choices?.length ?? 0) > 0 ||
+              (call.candidates?.length ?? 0) > 0)
+        )
+      : undefined;
+
+  const handleAnswer = (answer: string) => {
+    if (thinking || activeModel === null) return;
+    onSendAction(answer, [], { ...options, turbo });
+  };
 
   /** createObjectURL로 만든 URL은 명시적으로 해제해야 메모리에 남지 않는다. */
   const releasePreviews = (items: Attachment[]) => {
@@ -336,7 +725,11 @@ export default function AgentSidebar({
 
   const handleSend = () => {
     if (!canSend) return;
-    onSendAction(trimmed, attachments.map((attachment) => attachment.file));
+    onSendAction(
+      trimmed,
+      attachments.map((attachment) => attachment.file),
+      { ...options, turbo }
+    );
     setInput('');
     setAttachments((prev) => {
       releasePreviews(prev);
@@ -373,7 +766,7 @@ export default function AgentSidebar({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -447,14 +840,14 @@ export default function AgentSidebar({
                   {AGENT_NAME}
                 </Text>
                 <Text style={{ fontSize: 12, color: SUB, lineHeight: 1.2 }}>
-                  신청서 작성 도우미
+                  {copy.role}
                 </Text>
               </div>
             </div>
 
             <div>
               <Text fw={700} style={{ fontSize: 17, color: TEXT, lineHeight: 1.4 }}>
-                말로 설명하면 신청서를 채워드려요
+                {copy.headline}
               </Text>
               <Text style={{ fontSize: 14, color: SUB, marginTop: 4 }}>
                 왼쪽 양식을 직접 고칠 수도 있어요.
@@ -462,7 +855,7 @@ export default function AgentSidebar({
             </div>
 
             <Stack gap={10}>
-              {ONBOARD_STEPS.map((step, index) => (
+              {copy.onboardSteps.map((step, index) => (
                 <div
                   key={step.label}
                   className="onboard-step"
@@ -506,13 +899,13 @@ export default function AgentSidebar({
             </Stack>
 
             <Stack gap={8}>
-              {SUGGESTIONS.map(({ label, icon: Icon }) => (
+              {copy.suggestions.map(({ label, icon: Icon }) => (
                 <button
                   key={label}
                   type="button"
                   className="suggest-chip"
                   disabled={thinking || activeModel === null}
-                  onClick={() => onSendAction(label, [])}
+                  onClick={() => onSendAction(label, [], { ...options, turbo })}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -532,7 +925,7 @@ export default function AgentSidebar({
           </div>
         ) : (
           <>
-            {messages.map((message) => {
+            {messages.map((message, index) => {
               if (message.role === 'system') {
                 return (
                   <div
@@ -550,6 +943,7 @@ export default function AgentSidebar({
               }
 
               const isUser = message.role === 'user';
+              const isStreamingTail = thinking && !isUser && index === messages.length - 1;
               return (
                 <div
                   key={message.id}
@@ -568,16 +962,30 @@ export default function AgentSidebar({
                       raw={message.reasoningRaw ?? false}
                     />
                   )}
+                  {isStreamingTail && (
+                    <ThinkingPanel
+                      steps={thinkingSteps}
+                      elapsed={thinkingElapsed}
+                      raw={false}
+                    />
+                  )}
                   {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
                     <ToolCallList calls={message.toolCalls} />
                   )}
+                  {message.attachments && message.attachments.length > 0 && (
+                    <MessageAttachments
+                      attachments={message.attachments}
+                      align={isUser ? 'flex-end' : 'flex-start'}
+                    />
+                  )}
+                  {message.content !== '' && (
                   <div
                     style={{
                       maxWidth: '85%',
                       padding: '9px 13px',
                       fontSize: 14,
                       lineHeight: 1.55,
-                      whiteSpace: 'pre-wrap',
+                      whiteSpace: isUser ? 'pre-wrap' : 'normal',
                       borderRadius: 14,
                       ...(isUser
                         ? {
@@ -593,70 +1001,31 @@ export default function AgentSidebar({
                           }),
                     }}
                   >
-                    {message.content}
+                    {isUser ? (
+                      message.content
+                    ) : (
+                      <div className="md">
+                        <Markdown remarkPlugins={[remarkGfm, remarkLooseBold]}>
+                          {message.content}
+                        </Markdown>
+                      </div>
+                    )}
                   </div>
+                  )}
                 </div>
               );
             })}
 
-            {thinking && (
-              <div className="fade-up" style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <div
-                  style={{
-                    maxWidth: '92%',
-                    borderRadius: 12,
-                    border: `1px solid ${BORDER}`,
-                    backgroundColor: SURFACE_SOFT,
-                    padding: '10px 12px',
-                  }}
-                >
-                  <Group gap={7} wrap="nowrap">
-                    <IconBrain size={15} color={SUB} className="brain-pulse" />
-                    <Text fw={600} style={{ fontSize: 13, color: LABEL_COLOR }}>
-                      생각 중
-                    </Text>
-                    <Text style={{ fontSize: 12, color: SUB }}>
-                      {thinkingElapsed}초
-                    </Text>
-                    {modelId === 'fast' && (
-                      <Text style={{ fontSize: 11, color: SUB, opacity: 0.8 }}>
-                        · 전체 표시
-                      </Text>
-                    )}
-                  </Group>
+            {pendingQuestion && (
+              <QuestionCard
+                call={pendingQuestion}
+                onAnswerAction={handleAnswer}
+                disabled={thinking || activeModel === null}
+              />
+            )}
 
-                  {thinkingSteps.length > 0 &&
-                    (modelId === 'fast' ? (
-                      <Text
-                        className="fade-up"
-                        style={{
-                          fontSize: 12,
-                          lineHeight: 1.75,
-                          color: SUB,
-                          marginTop: 9,
-                        }}
-                      >
-                        {thinkingSteps.join(' ')}
-                      </Text>
-                    ) : (
-                      <Stack gap={4} mt={9}>
-                        {thinkingSteps.map((step, index) => (
-                          <Text
-                            key={`${step}-${index}`}
-                            className="fade-up"
-                            style={{
-                              fontSize: 12,
-                              lineHeight: 1.5,
-                              color: index === thinkingSteps.length - 1 ? LABEL_COLOR : SUB,
-                            }}
-                          >
-                            {step}
-                          </Text>
-                        ))}
-                      </Stack>
-                    ))}
-                </div>
-              </div>
+            {thinking && messages.at(-1)?.role !== 'agent' && (
+              <ThinkingPanel steps={thinkingSteps} elapsed={thinkingElapsed} raw={false} />
             )}
           </>
         )}
@@ -665,13 +1034,35 @@ export default function AgentSidebar({
       <div style={{ padding: 18, paddingTop: 0, flexShrink: 0 }}>
         <div
           className="agent-composer"
+          data-turbo={turbo}
           style={{
-            border: `1px solid ${BORDER}`,
             borderRadius: 12,
             backgroundColor: 'white',
             padding: 10,
           }}
         >
+          <div
+            className="turbo-banner"
+            data-on={turbo}
+            aria-hidden={!turbo}
+          >
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  paddingBottom: 10,
+                }}
+              >
+                <IconBolt size={15} color="#b8730a" fill="#f59f00" style={{ flexShrink: 0 }} />
+                <Text fw={600} style={{ fontSize: 13, color: '#b8730a' }}>
+                  에이전트가 불필요한 질문하지 않고 빠르게 다 작성해요
+                </Text>
+              </div>
+            </div>
+          </div>
+
           {attachments.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
               {attachments.map((item) => (
@@ -766,7 +1157,6 @@ export default function AgentSidebar({
                     alignItems: 'flex-start',
                     border: `1px solid ${DANGER}`,
                     borderRadius: 8,
-                    backgroundColor: SURFACE_SOFT,
                     color: DANGER,
                     padding: '9px 10px',
                     marginBottom: 10,
@@ -870,9 +1260,26 @@ export default function AgentSidebar({
               </Popover.Dropdown>
             </Popover>
 
+            <Tooltip
+              label={turbo ? '빠르게 작성하기: 켜짐' : '빠르게 작성하기'}
+              {...TOOLTIP_PROPS}
+            >
+              <button
+                type="button"
+                onClick={() => setTurbo((prev) => !prev)}
+                aria-label="빠르게 작성하기"
+                aria-pressed={turbo}
+                className="turbo-btn"
+                data-on={turbo}
+                style={ICON_BTN}
+              >
+                <IconBolt size={17} />
+              </button>
+            </Tooltip>
+
             <div style={{ flex: 1 }} />
 
-            <Menu position="top-end" radius="md" shadow="md" width={210} withinPortal>
+            <Menu position="top-end" radius="md" shadow="md" withinPortal>
               <Menu.Target>
                 <button
                   type="button"
@@ -896,18 +1303,36 @@ export default function AgentSidebar({
                   <IconChevronDown size={14} color={SUB} />
                 </button>
               </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Label>모델</Menu.Label>
+              <Menu.Dropdown style={{ padding: 6, width: 'max-content', maxWidth: 300 }}>
+                <Menu.Label style={{ fontSize: 12, color: SUB, padding: '4px 8px 6px' }}>
+                  모델
+                </Menu.Label>
                 {models.map((model) => (
                   <Menu.Item
                     key={model.id}
                     onClick={() => onModelChangeAction(model.id)}
-                    rightSection={
-                      model.id === modelId ? <IconCheck size={14} color={DARK} /> : null
-                    }
+                    style={{ padding: '8px 8px', borderRadius: 8 }}
                   >
-                    <Text style={{ fontSize: 14, color: TEXT }}>{model.label}</Text>
-                    <Text style={{ fontSize: 12, color: SUB }}>{model.description}</Text>
+                    <Group gap={8} align="flex-start" wrap="nowrap">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            lineHeight: 1.35,
+                            color: TEXT,
+                            fontWeight: model.id === modelId ? 600 : 500,
+                          }}
+                        >
+                          {model.label}
+                        </Text>
+                        <Text style={{ fontSize: 13, lineHeight: 1.45, color: SUB, marginTop: 2 }}>
+                          {model.description}
+                        </Text>
+                      </div>
+                      <div style={{ width: 14, flexShrink: 0, marginTop: 2 }}>
+                        {model.id === modelId && <IconCheck size={14} color={DARK} />}
+                      </div>
+                    </Group>
                   </Menu.Item>
                 ))}
               </Menu.Dropdown>
