@@ -40,7 +40,7 @@ docker build -t bigbaedocs-v2 .
 docker run -p 3000:3000 bigbaedocs-v2
 ```
 
-The server listens on port `3000` by default (`PORT` env var). Configuration is read at runtime — pass the variables from `.env.example` with `-e` or `--env-file`:
+The server listens on port `3000` by default (`PORT` env var). Configuration is read at runtime, so one image serves every environment:
 
 ```bash
 docker run -p 3000:3000 \
@@ -49,4 +49,8 @@ docker run -p 3000:3000 \
   bigbaedocs-v2
 ```
 
-The image includes the rhwp wasm (`public/rhwp_bg.wasm` and `node_modules/@rhwp/core`), the HWPX templates under `src/templates/`, and `sharp` — all traced into `.next/standalone` at build time, so no extra mounts are needed.
+`host.docker.internal` resolves on Docker Desktop (macOS/Windows); on Linux, pass the host's address instead (e.g. `-e AGENT_BASE_URL=http://172.17.0.1:10100/v1`) or add `--add-host=host.docker.internal:host-gateway`.
+
+With `--env-file`, note that Docker does not strip quotes: `AGENT_MODELS_JSON='[...]'` from a dotenv file keeps the outer `'` and the server rejects it at `/api/agent/models`. Either remove the outer quotes in the env file, or pass that one variable with `-e`.
+
+The image carries everything the runtime reads: the rhwp wasm (`public/rhwp_bg.wasm`, plus `node_modules/@rhwp/core` for server-side HWPX generation), the templates under `src/templates/`, and `sharp` — copied explicitly by the `Dockerfile`, so no extra mounts are needed.

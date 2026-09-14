@@ -25,6 +25,9 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# fillTemplate() reads these from the app root at runtime; the standalone trace
+# only happens to include them as a side effect of tracing the whole project.
+COPY --from=builder --chown=nextjs:nodejs /app/src/templates ./src/templates
 
 USER nextjs
 EXPOSE 3000
