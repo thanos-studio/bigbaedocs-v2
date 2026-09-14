@@ -48,8 +48,8 @@ export async function POST(request: Request): Promise<Response> {
     return jsonError('Request body has an invalid agent chat shape.', 400);
   }
 
-  const { draft, model } = parsed.data;
-  const tools = createApplicationTools(draft);
+  const { draft, model, options, availableStudents } = parsed.data;
+  const tools = createApplicationTools(draft, availableStudents ?? [], options?.turbo ?? false);
   const checkedMessages = await safeValidateUIMessages({
     messages: parsed.data.messages,
     tools,
@@ -64,10 +64,10 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const result = streamText({
       model: getAgentModel(model),
-      instructions: buildApplicationAgentInstructions(draft),
+      instructions: buildApplicationAgentInstructions(draft, options),
       messages: await convertToModelMessages(checkedMessages.data),
       tools,
-      stopWhen: stepCountIs(5),
+      stopWhen: stepCountIs(options?.turbo ? 12 : 5),
     });
 
     return createUIMessageStreamResponse({

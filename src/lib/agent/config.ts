@@ -4,47 +4,29 @@ import { z } from 'zod';
 
 export type AgentProviderKind = 'openai-compatible' | 'openai-responses' | 'anthropic';
 
-const DEFAULT_ZEN_MODELS = [
+const DEFAULT_MODELS = [
   {
-    id: 'big-pickle',
-    model: 'big-pickle',
-    label: 'Big Pickle',
-    description: '복잡한 신청서 초안과 도구 작업을 안정적으로 처리',
+    id: 'gemini-3.8-flash-medium',
+    model: 'google-antigravity/gemini-3.8-flash-medium',
+    label: 'Gemini 3.8 Flash',
+    description: '속도와 품질의 균형',
   },
   {
-    id: 'mimo-v2.5-free',
-    model: 'mimo-v2.5-free',
-    label: 'MiMo-V2.5',
-    description: '일반적인 문장 작성과 요약을 가볍게 처리',
+    id: 'gemini-3.8-flash-high',
+    model: 'google-antigravity/gemini-3.8-flash-high',
+    label: 'Gemini 3.8 Flash High',
+    description: '꼼꼼한 초안 작성에 적합',
   },
   {
-    id: 'ling-3.0-flash-fin-free',
-    model: 'ling-3.0-flash-fin-free',
-    label: 'Ling 3.0 Flash Fin',
-    description: '짧은 요청에 빠르게 응답하는 경량 모델',
-  },
-  {
-    id: 'nemotron-3-ultra-free',
-    model: 'nemotron-3-ultra-free',
-    label: 'Nemotron 3 Ultra',
-    description: '긴 맥락을 바탕으로 꼼꼼한 초안 작성에 적합',
-  },
-  {
-    id: 'nemotron-3.5-lightning-free',
-    model: 'nemotron-3.5-lightning-free',
-    label: 'Nemotron 3.5 Lightning',
-    description: '속도와 품질을 균형 있게 제공하는 빠른 모델',
-  },
-  {
-    id: 'muse-spark-1.3-contributor-free',
-    model: 'muse-spark-1.3-contributor-free',
-    label: 'Muse Spark 1.3 Contributor',
-    description: '아이디어 정리와 표현 다듬기에 적합',
+    id: 'gemini-3.8-flash-low',
+    model: 'google-antigravity/gemini-3.8-flash-low',
+    label: 'Gemini 3.8 Flash Low',
+    description: '짧은 요청에 빠르게 응답',
   },
 ];
 
-const DEFAULT_ZEN_BASE_URL = 'https://opencode.ai/zen/v1';
-const DEFAULT_ZEN_MODEL_ID = 'big-pickle';
+const DEFAULT_BASE_URL = 'http://localhost:10100/v1';
+const DEFAULT_MODEL_ID = 'gemini-3.8-flash-medium';
 
 const environmentSchema = z.object({
   AGENT_PROVIDER: z.enum(['openai-compatible', 'openai-responses', 'anthropic']),
@@ -99,9 +81,9 @@ export function getAgentConfiguration(): AgentConfiguration {
   const parsed = environmentSchema.safeParse({
     AGENT_PROVIDER: process.env.AGENT_PROVIDER || 'openai-compatible',
     AGENT_API_KEY: process.env.AGENT_API_KEY || undefined,
-    AGENT_BASE_URL: process.env.AGENT_BASE_URL || DEFAULT_ZEN_BASE_URL,
-    AGENT_DEFAULT_MODEL: process.env.AGENT_DEFAULT_MODEL || DEFAULT_ZEN_MODEL_ID,
-    AGENT_MODELS_JSON: process.env.AGENT_MODELS_JSON || JSON.stringify(DEFAULT_ZEN_MODELS),
+    AGENT_BASE_URL: process.env.AGENT_BASE_URL || DEFAULT_BASE_URL,
+    AGENT_DEFAULT_MODEL: process.env.AGENT_DEFAULT_MODEL || DEFAULT_MODEL_ID,
+    AGENT_MODELS_JSON: process.env.AGENT_MODELS_JSON || JSON.stringify(DEFAULT_MODELS),
   });
 
   if (!parsed.success) {
