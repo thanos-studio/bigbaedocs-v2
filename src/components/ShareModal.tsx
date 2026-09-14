@@ -4,18 +4,10 @@ import { useEffect, useState } from 'react';
 import { Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { IconCheck, IconCopy, IconLink, IconLoader2, IconShare2 } from '@tabler/icons-react';
 
+import { Button } from '@/lib/graphite/components';
+import { FZ } from '@/lib/graphite/theme';
 import { shareCreateResponseSchema, type SharePayload } from '@/lib/share';
-import {
-  BORDER,
-  BTN_OUTLINE,
-  BTN_PRIMARY,
-  DANGER,
-  DONE_COLOR,
-  LABEL_COLOR,
-  SUB,
-  SURFACE_SOFT,
-  TEXT,
-} from '@/lib/theme';
+import { BORDER, DANGER, DONE_COLOR, LABEL_COLOR, SUB, SURFACE_SOFT, TEXT } from '@/lib/theme';
 
 const SHARED_ITEMS = ['제목', '장소와 주소', '기간', '학습 형태', '체험 목적', '활동 계획'];
 const WITHHELD_ITEMS = ['학생 이름', '학년·반·번호', '보호자 이름'];
@@ -123,7 +115,7 @@ export default function ShareModal({
             <IconShare2 size={18} color={SUB} />
           </div>
           <div>
-            <Text fw={700} style={{ fontSize: 16, color: TEXT }}>
+            <Text fw={700} style={{ fontSize: FZ.section, color: TEXT }}>
               링크로 공유
             </Text>
             <Text style={{ fontSize: 14, color: SUB, marginTop: 1 }}>
@@ -202,19 +194,14 @@ export default function ShareModal({
                 styles={{ input: { fontSize: 13, color: TEXT } }}
                 leftSection={<IconLink size={15} color={SUB} />}
               />
-              <button
-                type="button"
-                onClick={() => void handleCopy()}
-                className="solid-btn"
-                style={{ ...BTN_OUTLINE, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
+              <Button variant="outline" onClick={() => void handleCopy()}>
                 {copied ? (
                   <IconCheck size={15} color={DONE_COLOR} stroke={2.5} />
                 ) : (
                   <IconCopy size={15} />
                 )}
                 {copied ? '복사했어요' : '복사'}
-              </button>
+              </Button>
             </Group>
           </div>
         )}
@@ -236,23 +223,10 @@ export default function ShareModal({
           >
             닫기
           </button>
-          <button
-            type="button"
-            onClick={() => void handleCreate()}
-            disabled={creating}
-            className="solid-btn"
-            style={{
-              ...BTN_PRIMARY,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              opacity: creating ? 0.5 : 1,
-              cursor: creating ? 'not-allowed' : 'pointer',
-            }}
-          >
+          <Button variant="solid" onClick={() => void handleCreate()} disabled={creating}>
             {creating && <IconLoader2 size={15} className="spin" />}
             {shareUrl === '' ? '링크 만들기' : '새 링크 만들기'}
-          </button>
+          </Button>
         </Group>
       </Stack>
     </Modal>

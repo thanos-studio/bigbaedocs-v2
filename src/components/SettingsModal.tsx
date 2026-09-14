@@ -6,17 +6,9 @@ import { IconCheck, IconDatabase, IconSettings, IconTrash } from '@tabler/icons-
 
 import { clearStoredData, measureStoredBytes, usePreferredModel } from '@/lib/storage';
 import { agentModelCatalogSchema } from '@/lib/agent/client';
-import {
-  BORDER,
-  BTN_BASE,
-  BTN_OUTLINE,
-  DANGER,
-  DARK,
-  LABEL_COLOR,
-  SUB,
-  SURFACE_SOFT,
-  TEXT,
-} from '@/lib/theme';
+import { Button } from '@/lib/graphite/components';
+import { FZ } from '@/lib/graphite/theme';
+import { BORDER, DANGER, DARK, LABEL_COLOR, SUB, SURFACE_SOFT, TEXT } from '@/lib/theme';
 
 type StorageEntry = { key: string; label: string; bytes: number };
 
@@ -109,7 +101,7 @@ export default function SettingsModal({
             <IconSettings size={18} color={SUB} />
           </div>
           <div>
-            <Text fw={700} style={{ fontSize: 16, color: TEXT }}>
+            <Text fw={700} style={{ fontSize: FZ.section, color: TEXT }}>
               설정
             </Text>
             <Text style={{ fontSize: 14, color: SUB, marginTop: 1 }}>
@@ -228,22 +220,12 @@ export default function SettingsModal({
               학생 정보와 작성 중인 신청서가 모두 사라져요. 되돌릴 수 없어요.
             </Text>
             <Group gap={8} justify="flex-end" mt={12}>
-              <button
-                type="button"
-                onClick={() => setConfirmingClear(false)}
-                className="text-btn"
-                style={{ ...BTN_BASE, border: 'none', backgroundColor: 'transparent', color: SUB }}
-              >
+              <Button variant="ghost" onClick={() => setConfirmingClear(false)}>
                 취소
-              </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                className="solid-btn"
-                style={{ ...BTN_BASE, border: 'none', backgroundColor: DANGER, color: 'white', fontWeight: 600 }}
-              >
+              </Button>
+              <Button variant="danger" onClick={handleClear}>
                 전부 삭제
-              </button>
+              </Button>
             </Group>
           </div>
         ) : (
@@ -267,9 +249,9 @@ export default function SettingsModal({
               <IconTrash size={15} />
               데이터 초기화
             </button>
-            <button type="button" onClick={onCloseAction} className="solid-btn" style={BTN_OUTLINE}>
+            <Button variant="outline" onClick={onCloseAction}>
               닫기
-            </button>
+            </Button>
           </Group>
         )}
       </Stack>

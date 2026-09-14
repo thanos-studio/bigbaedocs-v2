@@ -17,12 +17,12 @@ import {
 
 import BrandMark from './BrandMark';
 import { HwpxViewer } from './HwpxViewer';
+import { Button } from '@/lib/graphite/components';
+import { FZ } from '@/lib/graphite/theme';
 import { shareReadResponseSchema, type SharePayload } from '@/lib/share';
 import { createId, useDrafts, useStudents } from '@/lib/storage';
 import {
   BORDER,
-  BTN_BASE,
-  BTN_PRIMARY,
   CARD_RADIUS,
   CARD_SHADOW,
   DANGER,
@@ -546,19 +546,10 @@ export default function SharedApplication({ id }: { id: string }) {
                         </div>
 
                         <Group gap={8} justify="flex-end" mt={14}>
-                          <button
-                            type="button"
+                          <Button
+                            variant="outline"
                             onClick={() => void handlePreview(index)}
                             disabled={actionDisabled(index)}
-                            style={{
-                              ...BTN_BASE,
-                              gap: 6,
-                              border: `1px solid ${BORDER}`,
-                              backgroundColor: 'white',
-                              color: LABEL_COLOR,
-                              opacity: actionDisabled(index) ? 0.5 : 1,
-                              cursor: actionDisabled(index) ? 'not-allowed' : 'pointer',
-                            }}
                           >
                             {busy === `preview-${index}` ? (
                               <IconLoader2 size={14} className="spin" />
@@ -566,20 +557,11 @@ export default function SharedApplication({ id }: { id: string }) {
                               <IconEye size={14} />
                             )}
                             {previewIndex === index ? '미리보기 닫기' : '미리보기'}
-                          </button>
-                          <button
-                            type="button"
+                          </Button>
+                          <Button
+                            variant="outline"
                             onClick={() => void handlePrint(index)}
                             disabled={actionDisabled(index)}
-                            style={{
-                              ...BTN_BASE,
-                              gap: 6,
-                              border: `1px solid ${BORDER}`,
-                              backgroundColor: 'white',
-                              color: LABEL_COLOR,
-                              opacity: actionDisabled(index) ? 0.5 : 1,
-                              cursor: actionDisabled(index) ? 'not-allowed' : 'pointer',
-                            }}
                           >
                             {busy === `print-${index}` ? (
                               <IconLoader2 size={14} className="spin" />
@@ -587,18 +569,11 @@ export default function SharedApplication({ id }: { id: string }) {
                               <IconPrinter size={14} />
                             )}
                             인쇄 · PDF
-                          </button>
-                          <button
-                            type="button"
+                          </Button>
+                          <Button
+                            variant="solid"
                             onClick={() => void handleDownload(index)}
                             disabled={actionDisabled(index)}
-                            className="solid-btn"
-                            style={{
-                              ...BTN_PRIMARY,
-                              gap: 6,
-                              opacity: actionDisabled(index) ? 0.5 : 1,
-                              cursor: actionDisabled(index) ? 'not-allowed' : 'pointer',
-                            }}
                           >
                             {busy === `hwpx-${index}` ? (
                               <IconLoader2 size={14} className="spin" />
@@ -606,7 +581,7 @@ export default function SharedApplication({ id }: { id: string }) {
                               <IconDownload size={14} />
                             )}
                             HWPX
-                          </button>
+                          </Button>
                         </Group>
 
                         {previewIndex === index && previewBytes !== null && (
@@ -663,7 +638,7 @@ export default function SharedApplication({ id }: { id: string }) {
             <IconCheck size={22} color={DONE_COLOR} stroke={2.5} />
           </div>
           <div>
-            <Text fw={700} style={{ fontSize: 17, color: TEXT }}>
+            <Text fw={700} style={{ fontSize: FZ.section, color: TEXT }}>
               내 신청서로 보관을 완료했어요
             </Text>
             <Text style={{ fontSize: 14, color: SUB, marginTop: 6, lineHeight: 1.6 }}>
@@ -674,17 +649,15 @@ export default function SharedApplication({ id }: { id: string }) {
           </div>
 
           <Group justify="flex-end">
-            <button
-              type="button"
+            <Button
+              variant="solid"
               onClick={() => {
                 setKeptOpened(false);
                 router.push('/');
               }}
-              className="solid-btn"
-              style={BTN_PRIMARY}
             >
               메인으로 가기
-            </button>
+            </Button>
           </Group>
         </Stack>
       </Modal>
