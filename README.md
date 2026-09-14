@@ -29,8 +29,24 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Docker
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The single `Dockerfile` builds a production image with the Next.js [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output) (enabled in `next.config.ts`):
+
+```bash
+docker build -t bigbaedocs-v2 .
+docker run -p 3000:3000 bigbaedocs-v2
+```
+
+The server listens on port `3000` by default (`PORT` env var). Configuration is read at runtime — pass the variables from `.env.example` with `-e` or `--env-file`:
+
+```bash
+docker run -p 3000:3000 \
+  -e AGENT_PROVIDER=openai-compatible \
+  -e AGENT_BASE_URL=http://host.docker.internal:10100/v1 \
+  bigbaedocs-v2
+```
+
+The image includes the rhwp wasm (`public/rhwp_bg.wasm` and `node_modules/@rhwp/core`), the HWPX templates under `src/templates/`, and `sharp` — all traced into `.next/standalone` at build time, so no extra mounts are needed.
