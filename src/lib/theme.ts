@@ -29,13 +29,32 @@ export const TOOLTIP_PROPS = {
   transitionProps: { transition: 'fade' as const, duration: 140 },
 };
 
+/**
+ * 버튼 높이를 확정한다. height 없이 두면 테두리 두께가 높이에 더해져
+ * border:none인 PRIMARY와 border:1px인 OUTLINE이 2px 어긋난다.
+ * lineHeight도 상속값이 끼어들면 같은 글자 크기에서 높이가 갈린다.
+ */
 export const BTN_BASE: CSSProperties = {
-  padding: '8px 14px',
+  height: 38,
+  padding: '0 14px',
   borderRadius: 8,
   cursor: 'pointer',
   fontSize: 14,
   fontWeight: 500,
   lineHeight: 1,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxSizing: 'border-box',
+  whiteSpace: 'nowrap',
+};
+
+/** 카드 안처럼 좁은 자리에 쓰는 작은 버튼. */
+export const BTN_SMALL: CSSProperties = {
+  ...BTN_BASE,
+  height: 30,
+  padding: '0 11px',
+  fontSize: 13,
 };
 
 export const BTN_PRIMARY: CSSProperties = {

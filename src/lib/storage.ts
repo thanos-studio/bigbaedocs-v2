@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalStorage } from '@mantine/hooks';
 import {
   type ApplicationDraft,
@@ -11,13 +11,10 @@ import {
 export const STORAGE_KEYS = {
   students: 'bigbaedocs:students',
   drafts: 'bigbaedocs:application-drafts',
+  preferredModel: 'bigbaedocs:preferred-model',
 } as const;
 
-const DEFAULT_STUDENTS: Student[] = [
-  { id: '1', name: '김배대', classInfo: '1학년 7반 12번' },
-  { id: '2', name: '이서연', classInfo: '2학년 3반 4번' },
-  { id: '3', name: '박준호', classInfo: '1학년 2반 21번' },
-];
+const DEFAULT_STUDENTS: Student[] = [];
 
 const DEFAULT_DRAFTS: Record<string, ApplicationDraft> = {};
 
@@ -29,19 +26,20 @@ export function createId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-const noopSubscribe = () => () => {};
-
 /**
- * localStorage 하이드레이션 완료 여부.
- * Mantine의 useLocalStorage는 첫 렌더에서 defaultValue를 반환하므로,
- * 하이드레이션 전에는 저장된 값을 덮어쓰지 않도록 이 플래그로 가드한다.
+ * localStorage 읽기 완료 여부.
+ * Mantine의 useLocalStorage는 첫 렌더에서 defaultValue를 반환하고 저장값은 마운트 effect에서 읽는다.
+ * 따라서 이 플래그는 마운트 이후 한 렌더 뒤에 true가 되어야 한다.
+ * 첫 렌더에 true가 되면 저장된 값을 기본값으로 덮어써 데이터가 사라진다.
  */
 export function useHydrated(): boolean {
-  return useSyncExternalStore(
-    noopSubscribe,
-    () => true,
-    () => false
-  );
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  return hydrated;
 }
 
 export function useStudents() {
@@ -56,6 +54,35 @@ export function useDrafts() {
     key: STORAGE_KEYS.drafts,
     defaultValue: DEFAULT_DRAFTS,
   });
+}
+
+export function usePreferredModel() {
+  return useLocalStorage<string>({
+    key: STORAGE_KEYS.preferredModel,
+    defaultValue: '',
+  });
+}
+
+export function measureStoredBytes(): { key: string; label: string; bytes: number }[] {
+  if (typeof window === 'undefined') return [];
+
+  const labels: Record<string, string> = {
+    [STORAGE_KEYS.students]: '학생 정보',
+    [STORAGE_KEYS.drafts]: '신청서 초안',
+    [STORAGE_KEYS.preferredModel]: '기본 모델',
+  };
+
+  return Object.entries(labels).map(([key, label]) => ({
+    key,
+    label,
+    bytes: new Blob([window.localStorage.getItem(key) ?? '']).size,
+  }));
+}
+
+export function clearStoredData(): void {
+  if (typeof window === 'undefined') return;
+
+  Object.values(STORAGE_KEYS).forEach((key) => window.localStorage.removeItem(key));
 }
 
 export type SaveState = 'idle' | 'saving' | 'saved';
@@ -76,7 +103,8 @@ export function useApplicationDraft(uuid: string): DraftController {
   const hydrated = useHydrated();
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const draft = drafts[uuid] ?? createEmptyDraft(uuid);
+  // 이전 버전에서 저장된 초안에는 없는 필드가 있으므로 빈 초안 위에 덮어쓴다.
+  const draft = { ...createEmptyDraft(uuid), ...drafts[uuid], id: uuid };
 
   useEffect(
     () => () => {
@@ -88,7 +116,7 @@ export function useApplicationDraft(uuid: string): DraftController {
   const update = useCallback(
     (patch: Partial<Omit<ApplicationDraft, 'id'>>) => {
       setDrafts((prev) => {
-        const base = prev[uuid] ?? createEmptyDraft(uuid);
+        const base = { ...createEmptyDraft(uuid), ...prev[uuid] };
         return {
           ...prev,
           [uuid]: { ...base, ...patch, id: uuid, updatedAt: Date.now() },
