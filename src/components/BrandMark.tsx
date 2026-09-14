@@ -1,3 +1,5 @@
+import { RAW } from '@/lib/graphite/theme';
+
 type BrandMarkProps = {
   height?: number;
   documentColor?: string;
@@ -8,9 +10,13 @@ type BrandMarkProps = {
 const VIEW_W = 76;
 const VIEW_H = 64;
 
+/*
+ * 로고의 파란색은 브랜드 아트라서 무채색 팔레트 규칙에서 제외한다.
+ * UI 크롬(버튼·칩·링크)만 잉크를 쓴다.
+ */
 export default function BrandMark({
   height = 84,
-  documentColor = '#111827',
+  documentColor = RAW.text,
   lineColor = '#93aef2',
   accentColor = '#4c6ef5',
 }: BrandMarkProps) {

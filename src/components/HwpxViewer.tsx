@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Group, Text, Tooltip } from '@mantine/core';
 import { IconChevronLeft, IconChevronRight, IconLoader2 } from '@tabler/icons-react';
 
 import { BORDER, SUB, TEXT, TOOLTIP_PROPS } from '@/lib/theme';
+import { HOVER, SHADOW } from '@/lib/graphite/theme';
 import { renderHwpxPages } from '@/lib/hwpx-render';
 
 const PAGE_BTN: CSSProperties = {
@@ -57,7 +58,7 @@ export function HwpxViewer({ bytes, maxHeight = 460 }: { bytes: Uint8Array; maxH
         style={{
           border: `1px solid ${BORDER}`,
           borderRadius: 10,
-          backgroundColor: '#e9edf1',
+          backgroundColor: HOVER,
           height: maxHeight,
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -80,7 +81,7 @@ export function HwpxViewer({ bytes, maxHeight = 460 }: { bytes: Uint8Array; maxH
               width: '100%',
               aspectRatio: `${pageInfo.width} / ${pageInfo.height}`,
               backgroundColor: 'white',
-              boxShadow: '0 1px 6px rgba(15, 23, 42, 0.14)',
+              boxShadow: SHADOW.paper,
             }}
             dangerouslySetInnerHTML={{ __html: pageSvg }}
           />

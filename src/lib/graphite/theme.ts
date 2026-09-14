@@ -216,6 +216,8 @@ export const SHADOW = {
   card: 'var(--g-shadow-card)',
   lift: 'var(--g-shadow-lift)',
   chip: 'var(--g-shadow-chip)',
+  /** A page in a document preview. Heavier than a card, on purpose. */
+  paper: 'var(--g-shadow-paper)',
 } as const;
 
 export const MOTION = {

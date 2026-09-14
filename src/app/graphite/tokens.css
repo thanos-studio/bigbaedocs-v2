@@ -65,6 +65,9 @@
   --g-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
   --g-shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.08);
   --g-shadow-chip: 0 2px 6px rgba(0, 0, 0, 0.06);
+  /* A sheet of paper in a document preview - deliberately heavier than a card,
+   * because it reads as a physical page on a tinted tray rather than as UI. */
+  --g-shadow-paper: 0 1px 6px rgba(15, 23, 42, 0.14);
   --g-ring: 0 0 0 3px rgba(148, 163, 184, 0.14);
 
   /* Motion. Feedback is fast, entrances are unhurried, exits are faster than

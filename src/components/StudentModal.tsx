@@ -14,6 +14,7 @@ import {
   SURFACE_SOFT,
   TEXT,
 } from '@/lib/theme';
+import { HOVER, FAINT, ON_INK } from '@/lib/graphite/theme';
 
 function parseClassInfo(classInfo?: string) {
   const match = classInfo?.match(/(\d+)학년\s*(\d+)반\s*(\d+)번/);
@@ -191,8 +192,8 @@ export default function StudentModal({
                 ...BTN_BASE,
                 padding: '0 18px',
                 border: 'none',
-                backgroundColor: canSubmit ? DARK : '#e9ecef',
-                color: canSubmit ? 'white' : '#adb5bd',
+                backgroundColor: canSubmit ? DARK : HOVER,
+                color: canSubmit ? ON_INK : FAINT,
                 fontWeight: 600,
                 cursor: canSubmit ? 'pointer' : 'not-allowed',
               }}
