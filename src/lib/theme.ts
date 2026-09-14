@@ -1,50 +1,66 @@
 import type { CSSProperties } from 'react';
 
-/** 메인 페이지(GeneratorForm)와 공유하는 디자인 토큰. */
-export const PAGE_BG = '#f0f2f5';
-export const TEXT = '#111827';
-export const SUB = '#404a57';
-export const LABEL_COLOR = '#374151';
-export const MUTED = '#4b5563';
-export const BORDER = '#e5e7eb';
-export const BORDER_SOFT = '#f3f4f6';
-export const SURFACE_SOFT = '#f1f3f5';
-export const ACCENT = '#4c6ef5';
-export const DARK = '#212529';
-export const DANGER = '#e03131';
-export const GREEN = '#16a34a';
-export const GREEN_SOFT = '#e8f8ee';
-export const DONE_COLOR = '#15803d';
-
-export const CARD_RADIUS = 'lg' as const;
-export const CARD_SHADOW = '0 1px 3px rgba(0,0,0,0.04)';
-
-export const TOOLTIP_PROPS = {
-  position: 'top' as const,
-  withArrow: true,
-  openDelay: 250,
-  radius: 'md' as const,
-  fz: 12,
-  color: 'dark',
-  transitionProps: { transition: 'fade' as const, duration: 140 },
-};
+import * as g from './graphite/theme';
 
 /**
- * 버튼 높이를 확정한다. height 없이 두면 테두리 두께가 높이에 더해져
- * border:none인 PRIMARY와 border:1px인 OUTLINE이 2px 어긋난다.
- * lineHeight도 상속값이 끼어들면 같은 글자 크기에서 높이가 갈린다.
+ * 프로젝트 토큰. 값은 전부 graphite 로 위임하고 기존 이름만 유지한다.
+ *
+ * 653곳에서 이 이름들을 쓰고 있어서 rename 대신 재정의를 택했다. 새 코드는
+ * `@/lib/graphite/theme` 에서 직접 가져오고, 버튼·칩·카드는
+ * `@/lib/graphite/components` 의 컴포넌트를 쓴다.
+ *
+ * 여기 있는 BTN_* 은 graphite 가 지운 프리셋의 잔재다. <Button> 으로 옮기면서
+ * 하나씩 사라진다. 인라인 배경이 클래스의 :hover 를 이기는 문제가 여기서 나온다.
+ */
+
+export const PAGE_BG = g.PAGE;
+export const TEXT = g.TEXT;
+export const SUB = g.SUB;
+export const LABEL_COLOR = g.LABEL;
+export const MUTED = g.MUTED;
+export const BORDER = g.BORDER;
+export const BORDER_SOFT = g.BORDER_SOFT;
+export const SURFACE_SOFT = g.SOFT;
+export const DARK = g.INK;
+export const DANGER = g.DANGER;
+export const GREEN = g.DONE;
+export const GREEN_SOFT = g.DONE_BG;
+export const DONE_COLOR = g.DONE;
+
+/**
+ * 예전엔 파란색(#4c6ef5)이었다. graphite 는 무채색이고 강조는 잉크가 맡으므로
+ * 잉크로 보냈다. 파란 링크색을 되살리면 팔레트가 다시 두 갈래가 된다.
+ */
+export const ACCENT = g.INK;
+
+export const CARD_RADIUS = g.CARD_RADIUS;
+export const CARD_SHADOW = g.SHADOW.card;
+
+export const TOOLTIP_PROPS = g.TOOLTIP_PROPS;
+export const INPUT_STYLES = g.INPUT_STYLES;
+
+/* -------------------------------------------------------------- 버튼 잔재 ---- */
+
+/**
+ * 높이와 lineHeight:1 은 없으면 안 된다. height 를 비우면 border:none 버튼과
+ * border:1px 버튼이 2px 어긋나 같은 줄에서 삐뚤어지고, lineHeight 를 비우면
+ * 상속값이 끼어들어 같은 글자 크기인데 높이가 갈린다.
+ *
+ * 배경·색은 넣지 않는다. 인라인으로 주면 클래스의 :hover 를 이겨서 hover 가
+ * 죽는다. .solid-btn / [data-outline] 클래스가 그 역할을 한다.
  */
 export const BTN_BASE: CSSProperties = {
   height: 38,
-  padding: '0 14px',
-  borderRadius: 8,
+  padding: '0 18px',
+  borderRadius: g.R.md,
   cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 500,
+  fontSize: g.FZ.body,
+  fontWeight: g.FW.medium,
   lineHeight: 1,
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
+  gap: g.SP.xs,
   boxSizing: 'border-box',
   whiteSpace: 'nowrap',
 };
@@ -54,34 +70,29 @@ export const BTN_SMALL: CSSProperties = {
   ...BTN_BASE,
   height: 30,
   padding: '0 11px',
-  fontSize: 13,
+  fontSize: g.FZ.caption,
 };
 
 export const BTN_PRIMARY: CSSProperties = {
   ...BTN_BASE,
   border: 'none',
-  backgroundColor: DARK,
-  color: 'white',
-  fontWeight: 600,
+  backgroundColor: g.INK,
+  color: g.ON_INK,
+  fontWeight: g.FW.semibold,
 };
 
 export const BTN_OUTLINE: CSSProperties = {
   ...BTN_BASE,
-  border: '1px solid #d1d5db',
-  backgroundColor: 'white',
-  color: LABEL_COLOR,
+  border: `1px solid ${g.BORDER_HOVER}`,
+  backgroundColor: g.SURFACE,
+  color: g.LABEL,
 };
 
 export const BTN_DISABLED: CSSProperties = {
   ...BTN_BASE,
   border: 'none',
-  backgroundColor: '#e9ecef',
-  color: '#adb5bd',
-  fontWeight: 600,
+  backgroundColor: g.HOVER,
+  color: g.FAINT,
+  fontWeight: g.FW.semibold,
   cursor: 'not-allowed',
 };
-
-export const INPUT_STYLES = {
-  label: { fontSize: 14, fontWeight: 500, color: LABEL_COLOR, marginBottom: 6 },
-  input: { fontSize: 14 },
-} as const;
