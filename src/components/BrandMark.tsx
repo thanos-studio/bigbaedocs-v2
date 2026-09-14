@@ -17,8 +17,8 @@ const VIEW_H = 64;
 export default function BrandMark({
   height = 84,
   documentColor = RAW.text,
-  lineColor = '#93aef2',
-  accentColor = '#4c6ef5',
+  lineColor = RAW.brandSoft,
+  accentColor = RAW.brand,
 }: BrandMarkProps) {
   return (
     <svg

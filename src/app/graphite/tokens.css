@@ -54,6 +54,9 @@
   --g-danger-active: #ffc9c9;
   --g-warn: #f59f00;
   --g-warn-bg: #fff9ec;
+  /* Text and icons on --g-warn-bg. The fill colour itself is too light to read
+   * against its own tint, so it needs a darker sibling rather than reuse. */
+  --g-warn-text: #b8730a;
 
   /* Radius. 8 for rectangles, 999 for chips, 12 for panels, lg(16) for cards. */
   --g-r-sm: 6px;
@@ -68,6 +71,9 @@
   /* A sheet of paper in a document preview - deliberately heavier than a card,
    * because it reads as a physical page on a tinted tray rather than as UI. */
   --g-shadow-paper: 0 1px 6px rgba(15, 23, 42, 0.14);
+  /* An element the cursor is carrying. Must clearly out-shadow --g-shadow-lift,
+   * or a dragged item looks glued to the surface it is floating over. */
+  --g-shadow-drag: 0 8px 20px rgba(0, 0, 0, 0.15);
   --g-ring: 0 0 0 3px rgba(148, 163, 184, 0.14);
 
   /* Motion. Feedback is fast, entrances are unhurried, exits are faster than

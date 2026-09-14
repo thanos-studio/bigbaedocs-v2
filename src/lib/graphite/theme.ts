@@ -41,6 +41,8 @@ export const DANGER_HOVER = 'var(--g-danger-hover)';
 export const DANGER_ACTIVE = 'var(--g-danger-active)';
 export const WARN = 'var(--g-warn)';
 export const WARN_BG = 'var(--g-warn-bg)';
+/** Text/icon colour on WARN_BG. WARN itself is unreadable on its own tint. */
+export const WARN_TEXT = 'var(--g-warn-text)';
 
 /** Text/icon colour on top of filled ink. */
 export const ON_INK = 'var(--g-surface)';
@@ -75,6 +77,9 @@ export const RAW = {
   dangerActive: '#ffc9c9',
   warn: '#f59f00',
   warnBg: '#fff9ec',
+  warnText: '#b8730a',
+  brand: '#4c6ef5',
+  brandSoft: '#93aef2',
 } as const;
 
 /* -------------------------------------------------------------------- type -- */
@@ -222,6 +227,8 @@ export const SHADOW = {
   chip: 'var(--g-shadow-chip)',
   /** A page in a document preview. Heavier than a card, on purpose. */
   paper: 'var(--g-shadow-paper)',
+  /** An element the cursor is carrying. Must out-shadow `lift`. */
+  drag: 'var(--g-shadow-drag)',
 } as const;
 
 export const MOTION = {

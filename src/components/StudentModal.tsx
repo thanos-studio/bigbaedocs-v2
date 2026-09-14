@@ -4,17 +4,8 @@ import { useState } from 'react';
 import { Modal, Stack, Group, Text, TextInput } from '@mantine/core';
 import { IconUsers } from '@tabler/icons-react';
 import type { Student } from '@/lib/types';
-import {
-  BTN_BASE,
-  BTN_OUTLINE,
-  DANGER,
-  DARK,
-  INPUT_STYLES,
-  SUB,
-  SURFACE_SOFT,
-  TEXT,
-} from '@/lib/theme';
-import { HOVER, FAINT, ON_INK } from '@/lib/graphite/theme';
+import { Button } from '@/lib/graphite/components';
+import { DANGER, INPUT_STYLES, SUB, SURFACE_SOFT, TEXT } from '@/lib/theme';
 
 function parseClassInfo(classInfo?: string) {
   const match = classInfo?.match(/(\d+)학년\s*(\d+)반\s*(\d+)번/);
@@ -175,31 +166,12 @@ export default function StudentModal({
             </button>
           )}
           <Group gap={8}>
-            <button
-              type="button"
-              onClick={handleClose}
-              data-outline
-              style={{ ...BTN_OUTLINE, padding: '0 18px' }}
-            >
+            <Button variant="outline" onClick={handleClose}>
               취소
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className={canSubmit ? 'solid-btn' : undefined}
-              style={{
-                ...BTN_BASE,
-                padding: '0 18px',
-                border: 'none',
-                backgroundColor: canSubmit ? DARK : HOVER,
-                color: canSubmit ? ON_INK : FAINT,
-                fontWeight: 600,
-                cursor: canSubmit ? 'pointer' : 'not-allowed',
-              }}
-            >
+            </Button>
+            <Button variant="solid" onClick={handleSubmit} disabled={!canSubmit}>
               {isEditing ? '저장' : '추가하기'}
-            </button>
+            </Button>
           </Group>
         </Group>
       </Stack>

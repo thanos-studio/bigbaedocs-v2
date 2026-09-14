@@ -65,13 +65,12 @@ import {
   GREEN_SOFT,
   CARD_RADIUS,
   CARD_SHADOW,
-  BTN_PRIMARY,
-  BTN_OUTLINE,
-  BTN_DISABLED,
   INPUT_STYLES,
   LABEL_COLOR,
   TOOLTIP_PROPS,
 } from '@/lib/theme';
+import { BORDER_HOVER, FAINT, FZ, ON_INK_SUB, RAW } from '@/lib/graphite/theme';
+import { Button } from '@/lib/graphite/components';
 import AgentSidebar, { type WritingOptionState } from './AgentSidebar';
 import ShareModal from './ShareModal';
 import type { SharePayload } from '@/lib/share';
@@ -197,7 +196,7 @@ function DraftTitle({
         style={{
           fontSize: 24,
           letterSpacing: -0.4,
-          color: value.trim() === '' ? '#9aa3af' : TEXT,
+          color: value.trim() === '' ? FAINT : TEXT,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -233,7 +232,7 @@ function StepHeader({
           flexShrink: 0,
         }}
       >
-        <Icon size={18} color="#555e6b" />
+        <Icon size={18} color={RAW.muted} />
       </div>
       <div>
         <Text fw={700} style={{ fontSize: 15, color: TEXT }}>
@@ -1046,7 +1045,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
       <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 18 }}>
         <Text
           fw={800}
-          style={{ fontSize: 19, letterSpacing: -0.4, color: TEXT, lineHeight: 1.2 }}
+          style={{ fontSize: FZ.heading, letterSpacing: -0.4, color: TEXT, lineHeight: 1.2 }}
         >
           BigBaeDocs
         </Text>
@@ -1133,7 +1132,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                           flexShrink: 0,
                         }}
                       >
-                        <IconUsers size={18} color="#555e6b" />
+                        <IconUsers size={18} color={RAW.muted} />
                       </div>
                       <div>
                         <Text fw={700} style={{ fontSize: 15, color: TEXT }}>
@@ -1168,6 +1167,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                           className="pick-chip"
                           data-picked={isPicked}
                           aria-pressed={isPicked}
+                          aria-label={`${s.name} ${s.classInfo} 선택`}
                           onClick={() => toggleStudent(s.id)}
                           style={{
                             display: 'inline-flex',
@@ -1180,7 +1180,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                           <Text fw={600} style={{ fontSize: 14, color: isPicked ? 'white' : TEXT }}>
                             {s.name}
                           </Text>
-                          <Text style={{ fontSize: 14, color: isPicked ? 'rgba(255,255,255,0.72)' : SUB }}>
+                          <Text style={{ fontSize: 14, color: isPicked ? ON_INK_SUB : SUB }}>
                             {s.classInfo}
                           </Text>
                           {isPicked && <IconCheck size={14} color="white" />}
@@ -1196,7 +1196,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
-                        border: '1px dashed #cbd5e1',
+                        border: `1px dashed ${BORDER_HOVER}`,
                         borderRadius: 20,
                         padding: '7px 16px',
                         backgroundColor: 'transparent',
@@ -1239,6 +1239,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                               className="pick-chip"
                               data-picked={isPicked}
                               aria-pressed={isPicked}
+                              aria-label={`${option.label} 선택`}
                               onClick={() => handleRegionChange(option.id)}
                               style={{
                                 display: 'inline-flex',
@@ -1333,57 +1334,37 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
 
                         <Group gap={8} mt={10} wrap="nowrap">
                           <Tooltip label="지도 데이터에서 정확한 주소를 찾아요" {...TOOLTIP_PROPS}>
-                            <button
-                              type="button"
+                            <Button
+                              variant="outline"
                               onClick={() => void runPlaceSearch('osm')}
                               disabled={placeQuery.trim() === '' || placeSearching !== null}
-                              className="solid-btn"
-                              style={{
-                                ...BTN_OUTLINE,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                opacity: placeQuery.trim() === '' || placeSearching !== null ? 0.5 : 1,
-                                cursor:
-                                  placeQuery.trim() === '' || placeSearching !== null
-                                    ? 'not-allowed'
-                                    : 'pointer',
-                              }}
+                              leftIcon={
+                                placeSearching === 'osm' ? (
+                                  <IconLoader2 size={15} className="spin" />
+                                ) : (
+                                  <IconMap size={15} />
+                                )
+                              }
                             >
-                              {placeSearching === 'osm' ? (
-                                <IconLoader2 size={15} className="spin" />
-                              ) : (
-                                <IconMap size={15} />
-                              )}
                               지도에서 찾기
-                            </button>
+                            </Button>
                           </Tooltip>
 
                           <Tooltip label="AI가 후보 주소를 추려줘요" {...TOOLTIP_PROPS}>
-                            <button
-                              type="button"
+                            <Button
+                              variant="outline"
                               onClick={() => void runPlaceSearch('agent')}
                               disabled={placeQuery.trim() === '' || placeSearching !== null}
-                              className="solid-btn"
-                              style={{
-                                ...BTN_OUTLINE,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                opacity: placeQuery.trim() === '' || placeSearching !== null ? 0.5 : 1,
-                                cursor:
-                                  placeQuery.trim() === '' || placeSearching !== null
-                                    ? 'not-allowed'
-                                    : 'pointer',
-                              }}
+                              leftIcon={
+                                placeSearching === 'agent' ? (
+                                  <IconLoader2 size={15} className="spin" />
+                                ) : (
+                                  <IconSparkles size={15} />
+                                )
+                              }
                             >
-                              {placeSearching === 'agent' ? (
-                                <IconLoader2 size={15} className="spin" />
-                              ) : (
-                                <IconSparkles size={15} />
-                              )}
                               AI로 찾기
-                            </button>
+                            </Button>
                           </Tooltip>
                         </Group>
 
@@ -1421,6 +1402,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                                 })
                               }
                               className="place-result"
+                              aria-label={`${place.name} 선택`}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1451,6 +1433,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                                 type="button"
                                 onClick={() => selectPlace(place)}
                                 className="place-result"
+                                aria-label={`${place.name} 선택`}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -1552,38 +1535,21 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                           styles={INPUT_STYLES}
                           style={{ flex: 1 }}
                         />
-                        <button
-                          type="button"
+                        <Button
+                          variant="solid"
                           onClick={handleConvertDate}
                           disabled={dateText.trim() === '' || dateConverting}
-                          className={
-                            dateText.trim() === '' || dateConverting ? undefined : 'solid-btn'
-                          }
-                          style={{
-                            ...(dateText.trim() === '' || dateConverting
-                              ? BTN_DISABLED
-                              : BTN_PRIMARY),
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 6,
-                            height: 42,
-                            padding: '0 18px',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {dateConverting ? (
-                            <>
+                          style={{ height: 42, flexShrink: 0 }}
+                          leftIcon={
+                            dateConverting ? (
                               <IconLoader2 size={15} className="spin" />
-                              변환 중
-                            </>
-                          ) : (
-                            <>
+                            ) : (
                               <IconSparkles size={15} />
-                              변환
-                            </>
-                          )}
-                        </button>
+                            )
+                          }
+                        >
+                          {dateConverting ? '변환 중' : '변환'}
+                        </Button>
                       </Group>
                       {dateParseFailed && (
                         <Text style={{ fontSize: 13, color: DANGER, marginTop: 8 }}>
@@ -1754,7 +1720,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                         <Text
                           style={{
                             fontSize: 14,
-                            color: row.value ? TEXT : '#9aa3af',
+                            color: row.value ? TEXT : FAINT,
                             whiteSpace: 'pre-wrap',
                             flex: 1,
                           }}
@@ -1943,35 +1909,15 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                     </Group>
                   )}
 
-                  <button
-                    type="button"
+                  <Button
+                    variant="solid"
                     onClick={handleGenerate}
                     disabled={missingRequired.length > 0 || generating}
-                    className={
-                      missingRequired.length === 0 && !generating ? 'solid-btn' : undefined
-                    }
-                    style={{
-                      ...(missingRequired.length === 0 && !generating
-                        ? BTN_PRIMARY
-                        : BTN_DISABLED),
-                      width: '100%',
-                      marginTop: 20,
-                      padding: '11px 0',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 7,
-                    }}
+                    style={{ width: '100%', marginTop: 20, padding: '11px 0' }}
+                    leftIcon={generating ? <IconLoader2 size={16} className="spin" /> : undefined}
                   >
-                    {generating ? (
-                      <>
-                        <IconLoader2 size={16} className="spin" />
-                        문서를 만들고 있어요
-                      </>
-                    ) : (
-                      '신청서 만들기'
-                    )}
-                  </button>
+                    {generating ? '문서를 만들고 있어요' : '신청서 만들기'}
+                  </Button>
                 </Paper>
               ) : (
                 <Paper withBorder radius={CARD_RADIUS} p={24} style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW }}>
@@ -1991,14 +1937,9 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                         만들어 둔 문서가 없어요. 문서는 저장되지 않으니 다시 만들어야 해요.
                       </Text>
                       <Group>
-                        <button
-                          type="button"
-                          onClick={() => update({ step: 'review' })}
-                          className="solid-btn"
-                          style={{ ...BTN_PRIMARY, padding: '0 18px' }}
-                        >
+                        <Button variant="solid" onClick={() => update({ step: 'review' })}>
                           검토로 가서 다시 만들기
-                        </button>
+                        </Button>
                       </Group>
                     </Stack>
                   ) : (
@@ -2115,68 +2056,35 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                       <Group gap={8}>
                         {documents.length > 1 && (
                           <>
-                            <button
-                              type="button"
+                            <Button
+                              variant="solid"
                               onClick={() => void handleDownloadAll()}
-                              className="solid-btn"
-                              style={{
-                                ...BTN_PRIMARY,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 7,
-                                padding: '0 18px',
-                              }}
+                              leftIcon={<IconDownload size={16} />}
                             >
-                              <IconDownload size={16} />
                               HWPX {documents.length}개 받기
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
+                              variant="outline"
                               onClick={() => void handlePrintAll()}
                               disabled={printing !== null}
-                              data-outline
-                              style={{
-                                ...BTN_OUTLINE,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 7,
-                                padding: '0 18px',
-                                opacity: printing !== null ? 0.5 : 1,
-                                cursor: printing !== null ? 'not-allowed' : 'pointer',
-                              }}
+                              leftIcon={
+                                printing === '__all__' ? (
+                                  <IconLoader2 size={16} className="spin" />
+                                ) : (
+                                  <IconPrinter size={16} />
+                                )
+                              }
                             >
-                              {printing === '__all__' ? (
-                                <IconLoader2 size={16} className="spin" />
-                              ) : (
-                                <IconPrinter size={16} />
-                              )}
                               모두 인쇄 · PDF
-                            </button>
+                            </Button>
                           </>
                         )}
-                        <button
-                          type="button"
-                          onClick={openShare}
-                          data-outline
-                          style={{
-                            ...BTN_OUTLINE,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 7,
-                            padding: '0 18px',
-                          }}
-                        >
-                          <IconShare2 size={16} />
+                        <Button variant="outline" onClick={openShare} leftIcon={<IconShare2 size={16} />}>
                           링크로 공유
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => update({ step: 'review' })}
-                          data-outline
-                          style={{ ...BTN_OUTLINE, padding: '0 18px' }}
-                        >
+                        </Button>
+                        <Button variant="outline" onClick={() => update({ step: 'review' })}>
                           다시 만들기
-                        </button>
+                        </Button>
                       </Group>
 
                       <Text style={{ fontSize: 13, color: SUB, lineHeight: 1.6 }}>
@@ -2193,36 +2101,20 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
 
               <Group justify="space-between" mt={24}>
                 {!isFirstStep ? (
-                  <button type="button" data-outline onClick={handlePrev} style={BTN_OUTLINE}>
+                  <Button variant="outline" onClick={handlePrev}>
                     이전
-                  </button>
+                  </Button>
                 ) : (
                   <span />
                 )}
                 {isLastStep ? (
-                  <button
-                    type="button"
-                    onClick={openDone}
-                    className="solid-btn"
-                    style={{
-                      ...BTN_PRIMARY,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 7,
-                    }}
-                  >
-                    <IconCheck size={16} stroke={2.5} />
+                  <Button variant="solid" onClick={openDone} leftIcon={<IconCheck size={16} stroke={2.5} />}>
                     완료
-                  </button>
+                  </Button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!canAdvance}
-                    style={canAdvance ? BTN_PRIMARY : BTN_DISABLED}
-                  >
+                  <Button variant="solid" onClick={handleNext} disabled={!canAdvance}>
                     다음
-                  </button>
+                  </Button>
                 )}
               </Group>
           </Stack>
@@ -2304,7 +2196,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
             <IconCheck size={22} color={DONE_COLOR} stroke={2.5} />
           </div>
           <div>
-            <Text fw={700} style={{ fontSize: 17, color: TEXT }}>
+            <Text fw={700} style={{ fontSize: FZ.section, color: TEXT }}>
               체험학습 신청서를 모두 완료했어요
             </Text>
             <Text style={{ fontSize: 14, color: SUB, marginTop: 6, lineHeight: 1.6 }}>
@@ -2362,18 +2254,16 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
             >
               계속 보기
             </button>
-            <button
-              type="button"
+            <Button
+              variant="solid"
               onClick={() => {
                 closeDone();
                 router.push('/');
               }}
-              className="solid-btn"
-              style={{ ...BTN_PRIMARY, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              leftIcon={<IconArrowLeft size={15} />}
             >
-              <IconArrowLeft size={15} />
               나가기
-            </button>
+            </Button>
           </Group>
         </Stack>
       </Modal>

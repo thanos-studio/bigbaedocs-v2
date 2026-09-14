@@ -156,8 +156,10 @@ function checkFile(file, raw) {
       'keys must be stable entity ids; a changing key destroys the exit animation');
   }
 
-  /* Native title tooltip - unstyled, and roughly a second late. */
-  for (const m of src.matchAll(/<[a-zA-Z][^>]*?\stitle=(?:"|\{)/g)) {
+  /* Native title tooltip - unstyled, and roughly a second late.
+   * Only lowercase tags are DOM elements; on a React component `title` is a
+   * plain prop (StepHeader, ModeButton) and renders no tooltip at all. */
+  for (const m of src.matchAll(/<[a-z][a-zA-Z0-9-]*[^>]*?\stitle=(?:"|\{)/g)) {
     if (/<(?:title|head|html|svg|path)\b/i.test(m[0])) continue;
     add(warnings, rel, lineOf(src, m.index), 'no-native-title', 'native title= tooltip',
       'use Mantine Tooltip with TOOLTIP_PROPS');
@@ -182,8 +184,29 @@ function checkFile(file, raw) {
      * guess which one lacks a label. */
     if (/<button\b/.test(body)) continue;
 
-    const text = body.replace(/<[^>]*>/g, '').replace(/\{[^}]*\}/g, '').trim();
-    const hasText = /[A-Za-z0-9\u3131-\uD79D]/.test(text);
+    /*
+     * A JSX expression can be the label rather than logic: `{trip.name}`,
+     * `{`알림 ${n}건`}` and `{busy ? <>변환 중</> : <>변환</>}` all render text.
+     * Stripping every `{...}` treated those as empty and flagged correctly
+     * labelled buttons.
+     *
+     * Checking for a ternary alone is not enough - `{busy ? <A/> : <B/>}` is a
+     * genuinely unlabelled icon swap, and an earlier version of this rule let
+     * it through. So look for words inside the expression, after removing tags
+     * and arrow-function handlers.
+     */
+    const expressions = [...body.matchAll(/\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g)]
+      .map((m) => m[1])
+      .filter((e) => !/=>/.test(e))
+      .join(' ')
+      .replace(/<[^>]*>/g, ' ');
+    const dynamicWords = /[\u3131-\uD79D]|[A-Za-z]{2,}/.test(
+      /* Drop identifiers that are only being read, keeping their leaf name:
+       * `trip.name` still means a label, `onClick` never appears here. */
+      expressions.replace(/\b[\w$]+\s*\?\s*/g, ' '),
+    );
+    const literal = body.replace(/<[^>]*>/g, '').replace(/\{[^}]*\}/g, '').trim();
+    const hasText = dynamicWords || /[A-Za-z0-9\u3131-\uD79D]/.test(literal);
     const hasGlyph = /<(?:svg|Icon[A-Z]\w*)\b/.test(body);
     if (!hasText && hasGlyph)
       add(errors, rel, lineOf(src, open.index), 'icon-button-needs-label',

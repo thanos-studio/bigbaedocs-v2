@@ -37,7 +37,7 @@ import SettingsModal from './SettingsModal';
 import { createId, useDrafts, useStudents } from '@/lib/storage';
 import { createEmptyDraft, toTrip, type Student, type Trip } from '@/lib/types';
 import { Button } from '@/lib/graphite/components';
-import { BORDER_HOVER, RAW, FZ } from '@/lib/graphite/theme';
+import { BORDER_HOVER, RAW, FZ, SHADOW } from '@/lib/graphite/theme';
 import {
   TEXT,
   DANGER,
@@ -1000,7 +1000,7 @@ export default function GeneratorForm() {
               borderRadius: 20,
               padding: '7px 8px 7px 14px',
               backgroundColor: 'white',
-              boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+              boxShadow: SHADOW.drag,
             }}
           >
             <Text fw={600} style={{ fontSize: 14, color: TEXT }}>{draggedStudent.name}</Text>

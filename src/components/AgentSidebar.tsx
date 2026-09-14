@@ -44,8 +44,9 @@ import {
   TOOLTIP_PROPS,
   DONE_COLOR,
   DANGER,
-  BTN_PRIMARY,
 } from '@/lib/theme';
+import { RAW, FZ, WARN_TEXT } from '@/lib/graphite/theme';
+import { Button } from '@/lib/graphite/components';
 import { createId } from '@/lib/storage';
 
 export type AgentVariant = 'application' | 'report';
@@ -454,22 +455,13 @@ function QuestionCard({
             styles={{ input: { fontSize: 14, color: TEXT, minHeight: ANSWER_ROW_HEIGHT } }}
           />
           <Group justify="flex-end" mt={8}>
-            <button
-              type="button"
+            <Button
               onClick={submitFreeText}
               disabled={disabled || trimmedAnswer === ''}
-              aria-label="답변 보내기"
-              className="solid-btn"
-              style={{
-                ...BTN_PRIMARY,
-                height: ANSWER_ROW_HEIGHT,
-                padding: '0 15px',
-                opacity: disabled || trimmedAnswer === '' ? 0.45 : 1,
-                cursor: disabled || trimmedAnswer === '' ? 'not-allowed' : 'pointer',
-              }}
+              style={{ height: ANSWER_ROW_HEIGHT, padding: '0 15px' }}
             >
               확인
-            </button>
+            </Button>
           </Group>
         </div>
       </Collapse>
@@ -846,7 +838,7 @@ export default function AgentSidebar({
             </div>
 
             <div>
-              <Text fw={700} style={{ fontSize: 17, color: TEXT, lineHeight: 1.4 }}>
+              <Text fw={700} style={{ fontSize: FZ.section, color: TEXT, lineHeight: 1.4 }}>
                 {copy.headline}
               </Text>
               <Text style={{ fontSize: 14, color: SUB, marginTop: 4 }}>
@@ -1055,8 +1047,8 @@ export default function AgentSidebar({
                   paddingBottom: 10,
                 }}
               >
-                <IconBolt size={15} color="#b8730a" fill="#f59f00" style={{ flexShrink: 0 }} />
-                <Text fw={600} style={{ fontSize: 13, color: '#b8730a' }}>
+                <IconBolt size={15} color={RAW.warnText} fill={RAW.warn} style={{ flexShrink: 0 }} />
+                <Text fw={600} style={{ fontSize: 13, color: WARN_TEXT }}>
                   에이전트가 불필요한 질문하지 않고 빠르게 다 작성해요
                 </Text>
               </div>
@@ -1353,7 +1345,7 @@ export default function AgentSidebar({
                 justifyContent: 'center',
                 flexShrink: 0,
                 backgroundColor: canSend ? DARK : SURFACE_SOFT,
-                color: canSend ? 'white' : '#adb5bd',
+                color: canSend ? 'white' : RAW.faint,
                 cursor: canSend ? 'pointer' : 'not-allowed',
               }}
             >
