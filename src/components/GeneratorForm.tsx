@@ -36,17 +36,26 @@ import StudentModal from './StudentModal';
 import SettingsModal from './SettingsModal';
 import { createId, useDrafts, useStudents } from '@/lib/storage';
 import { createEmptyDraft, toTrip, type Student, type Trip } from '@/lib/types';
+import { Button } from '@/lib/graphite/components';
+import { BORDER_HOVER, RAW, FZ } from '@/lib/graphite/theme';
 import {
-  BTN_BASE,
-  BTN_SMALL,
-  BTN_OUTLINE,
-  BTN_PRIMARY,
+  TEXT,
+  DANGER,
+  MUTED,
+  BORDER,
+  DONE_COLOR,
+  SURFACE_SOFT,
+  ACCENT,
+  DARK,
+  REPORT_SOFT,
+  BORDER_SOFT,
+  GREEN_SOFT,
+  REPORT,
+  PAGE_BG,
+  SUB,
   TOOLTIP_PROPS,
   CARD_RADIUS,
   CARD_SHADOW,
-  DONE_COLOR,
-  LABEL_COLOR,
-  SUB,
 } from '@/lib/theme';
 
 const TAB_KEYS = ['all', 'writing', 'done'] as const;
@@ -77,7 +86,7 @@ function TabSwitcher({
 }) {
   const activeIndex = TAB_KEYS.indexOf(value);
   return (
-    <div style={{ position: 'relative', display: 'inline-flex', backgroundColor: '#f1f3f5', borderRadius: 20, padding: 3 }}>
+    <div style={{ position: 'relative', display: 'inline-flex', backgroundColor: SURFACE_SOFT, borderRadius: 20, padding: 3 }}>
       <div
         style={{
           position: 'absolute',
@@ -85,7 +94,7 @@ function TabSwitcher({
           bottom: 3,
           left: `calc(${(activeIndex / TAB_KEYS.length) * 100}% + 3px)`,
           width: `calc(${100 / TAB_KEYS.length}% - 6px)`,
-          backgroundColor: '#212529',
+          backgroundColor: DARK,
           borderRadius: 18,
           transition: 'left 280ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
@@ -382,7 +391,7 @@ export default function GeneratorForm() {
   }, [deleteMode, pendingDeleteStudent]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f0f2f5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: PAGE_BG }}>
       <main>
         <Container size={820} px="md" py={28}>
           <Stack gap={20}>
@@ -404,7 +413,7 @@ export default function GeneratorForm() {
             {/* Hero */}
             <Stack gap={8} align="center" pb={12}>
               <BrandMark height={84} />
-              <Title order={1} fw={800} style={{ fontSize: 34, letterSpacing: -0.8, color: '#111827', lineHeight: 1.1 }}>
+              <Title order={1} fw={800} style={{ fontSize: 34, letterSpacing: -0.8, color: TEXT, lineHeight: 1.1 }}>
                 BigBaeDocs
               </Title>
               <Text style={{ fontSize: 15, color: SUB }} ta="center">
@@ -425,17 +434,17 @@ export default function GeneratorForm() {
                 style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW, cursor: 'pointer', textAlign: 'left', width: '100%' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#e8f8ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <IconFileText size={22} color="#16a34a" />
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: GREEN_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <IconFileText size={22} color={RAW.done} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text fw={700} style={{ fontSize: 15, color: '#111827', marginBottom: 3 }}>체험학습 신청서 작성</Text>
+                    <Text fw={700} style={{ fontSize: 15, color: TEXT, marginBottom: 3 }}>체험학습 신청서 작성</Text>
                     <Text style={{ fontSize: 14, color: SUB, lineHeight: 1.5 }}>
                       체험 장소와 일정을 입력하면<br />AI가 신청서를 작성해드립니다.
                     </Text>
                   </div>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: '#e8f8ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <IconArrowRight size={16} color="#16a34a" />
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: GREEN_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <IconArrowRight size={16} color={RAW.done} />
                   </div>
                 </div>
               </Paper>
@@ -451,28 +460,28 @@ export default function GeneratorForm() {
                 style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW, cursor: 'pointer', textAlign: 'left', width: '100%' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#fdf1e3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <IconFileText size={22} color="#d97706" />
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: REPORT_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <IconFileText size={22} color={REPORT} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text fw={700} style={{ fontSize: 15, color: '#111827', marginBottom: 3 }}>체험학습 보고서 작성</Text>
+                    <Text fw={700} style={{ fontSize: 15, color: TEXT, marginBottom: 3 }}>체험학습 보고서 작성</Text>
                     <Text style={{ fontSize: 14, color: SUB, lineHeight: 1.5 }}>
                       체험 내용을 입력하면<br />AI가 보고서를 작성해드립니다.
                     </Text>
                   </div>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: '#fdf1e3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <IconArrowRight size={16} color="#d97706" />
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: REPORT_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <IconArrowRight size={16} color={REPORT} />
                   </div>
                 </div>
               </Paper>
             </SimpleGrid>
 
             {/* Tip */}
-            <Paper p="md" radius={CARD_RADIUS} style={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}>
+            <Paper p="md" radius={CARD_RADIUS} style={{ backgroundColor: 'white', border: `1px solid ${BORDER}` }}>
               <Group gap="sm">
-                <IconBulb size={16} color="#f59f00" />
-                <Text fw={700} style={{ fontSize: 14, color: '#111827' }}>Tip</Text>
-                <Text style={{ fontSize: 14, color: SUB, borderLeft: '1px solid #e5e7eb', paddingLeft: 10 }}>
+                <IconBulb size={16} color={RAW.warn} />
+                <Text fw={700} style={{ fontSize: 14, color: TEXT }}>Tip</Text>
+                <Text style={{ fontSize: 14, color: SUB, borderLeft: `1px solid ${BORDER}`, paddingLeft: 10 }}>
                   신청서를 먼저 작성하면, 입력한 내용으로 보고서를 더 쉽게 작성할 수 있어요.
                 </Text>
               </Group>
@@ -482,13 +491,13 @@ export default function GeneratorForm() {
             <Paper withBorder p="md" radius={CARD_RADIUS} style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW }}>
               <Group justify="space-between" mb="md">
                 <Group gap="sm">
-                  <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: '#f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <IconUsers size={18} color="#555e6b" />
+                  <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: SURFACE_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <IconUsers size={18} color={RAW.sub} />
                   </div>
                   <div>
-                    <Text fw={700} style={{ fontSize: 15, color: '#111827' }}>인적사항</Text>
+                    <Text fw={700} style={{ fontSize: 15, color: TEXT }}>인적사항</Text>
                     {deleteMode ? (
-                      <Text style={{ fontSize: 14, color: '#e03131', fontWeight: 500 }}>
+                      <Text style={{ fontSize: 14, color: DANGER, fontWeight: 500 }}>
                         삭제할 학생을 클릭하세요.
                       </Text>
                     ) : (
@@ -497,7 +506,7 @@ export default function GeneratorForm() {
                   </div>
                 </Group>
                 <Group gap={10}>
-                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#4c6ef5', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 2 }} className="visible-mobile">
+                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: ACCENT, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 2 }} className="visible-mobile">
                     관리 <IconChevronRight size={14} />
                   </button>
                   <button
@@ -518,8 +527,8 @@ export default function GeneratorForm() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: dragOverTrash || deleteMode ? '#ffe3e3' : '#f1f3f5',
-                      color: dragOverTrash || deleteMode ? '#e03131' : SUB,
+                      backgroundColor: dragOverTrash || deleteMode ? RAW.dangerHover : SURFACE_SOFT,
+                      color: dragOverTrash || deleteMode ? DANGER : SUB,
                       transform: dragOverTrash ? 'scale(1.25)' : undefined,
                       transition: 'background-color 150ms ease, color 150ms ease, transform 150ms ease',
                     }}
@@ -552,7 +561,7 @@ export default function GeneratorForm() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 8,
-                        border: '1px solid #e5e7eb',
+                        border: `1px solid ${BORDER}`,
                         borderRadius: 20,
                         padding: deleteMode ? '7px 14px' : '7px 8px 7px 14px',
                         backgroundColor: 'white',
@@ -561,7 +570,7 @@ export default function GeneratorForm() {
                         marginRight: isGapTarget && dropSide === 'after' ? gapWidth : 0,
                       }}
                     >
-                      <Text fw={600} style={{ fontSize: 14, color: '#111827' }}>{s.name}</Text>
+                      <Text fw={600} style={{ fontSize: 14, color: TEXT }}>{s.name}</Text>
                       <Text style={{ fontSize: 14, color: SUB }}>{s.classInfo}</Text>
                       {!deleteMode && (
                         <button
@@ -577,7 +586,7 @@ export default function GeneratorForm() {
                             borderRadius: '50%',
                             border: 'none',
                             cursor: 'pointer',
-                            color: '#6b7280',
+                            color: MUTED,
                           }}
                         >
                           <IconPencil size={14} />
@@ -596,7 +605,7 @@ export default function GeneratorForm() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
-                      border: '1px dashed #cbd5e1',
+                      border: `1px dashed ${BORDER_HOVER}`,
                       borderRadius: 20,
                       padding: '7px 16px',
                       backgroundColor: 'transparent',
@@ -623,8 +632,8 @@ export default function GeneratorForm() {
             <Stack gap={12}>
               <Group justify="space-between" align="center">
                 <Group gap="xs">
-                  <IconClock size={17} color="#374151" />
-                  <Text fw={700} style={{ fontSize: 16, color: '#111827' }}>최근 체험학습</Text>
+                  <IconClock size={17} color={RAW.label} />
+                  <Text fw={700} style={{ fontSize: FZ.section, color: TEXT }}>최근 체험학습</Text>
                 </Group>
                 <div className="hidden-mobile">
                   <TabSwitcher value={activeTab} onChange={setActiveTab} counts={tripCounts} />
@@ -639,9 +648,9 @@ export default function GeneratorForm() {
                 {visibleTrips.map((trip) => (
                   <Paper key={trip.id} withBorder radius={CARD_RADIUS} className="card-hover fade-up" style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW, overflow: 'hidden' }}>
                     {/* 상단: 문서 정보 */}
-                    <div style={{ padding: '16px 16px 14px', borderBottom: '1px solid #f3f4f6' }}>
+                    <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${BORDER_SOFT}` }}>
                       <Group justify="space-between" align="flex-start" gap={8} wrap="nowrap">
-                        <Text fw={700} style={{ fontSize: 15, color: '#111827', marginBottom: 6, flex: 1, minWidth: 0 }}>{trip.name}</Text>
+                        <Text fw={700} style={{ fontSize: 15, color: TEXT, marginBottom: 6, flex: 1, minWidth: 0 }}>{trip.name}</Text>
                         <Tooltip label="이 체험학습을 삭제해요" {...TOOLTIP_PROPS}>
                           <button
                             type="button"
@@ -667,11 +676,11 @@ export default function GeneratorForm() {
                         </Tooltip>
                       </Group>
                       <Group gap={4}>
-                        <IconCalendarEvent size={12} color="#4b5563" />
+                        <IconCalendarEvent size={12} color={RAW.muted} />
                         <Text style={{ fontSize: 13, color: SUB }}>{trip.dateRange}</Text>
                       </Group>
                       <Group gap={4} style={{ marginTop: 2 }}>
-                        <IconUser size={12} color="#4b5563" />
+                        <IconUser size={12} color={RAW.muted} />
                         <Text style={{ fontSize: 13, color: SUB }}>{trip.student}</Text>
                       </Group>
                     </div>
@@ -679,85 +688,86 @@ export default function GeneratorForm() {
                     {/* 하단: 신청서 | 보고서 2칸 */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                       {/* 신청서 */}
-                      <div style={{ padding: '12px 16px', borderRight: '1px solid #f3f4f6' }}>
-                        <Text style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, marginBottom: 8 }}>신청서</Text>
+                      <div style={{ padding: '12px 16px', borderRight: `1px solid ${BORDER_SOFT}` }}>
+                        <Text style={{ fontSize: 13, color: MUTED, fontWeight: 600, marginBottom: 8 }}>신청서</Text>
                         {trip.applicationStatus === 'done' ? (
                           <>
                             <Group gap={4} style={{ marginBottom: 8 }}>
-                              <IconCircleCheck size={14} color="#15803d" />
-                              <Text style={{ fontSize: 13, color: '#15803d', fontWeight: 600 }}>완료</Text>
+                              <IconCircleCheck size={14} color={RAW.done} />
+                              <Text style={{ fontSize: 13, color: DONE_COLOR, fontWeight: 600 }}>완료</Text>
                             </Group>
-                            <button
-                              type="button"
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => router.push(`/c/${trip.id}`)}
-                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }}
-                              data-outline
+                              style={{ width: '100%' }}
                             >
                               문서 보기
-                            </button>
+                            </Button>
                           </>
                         ) : trip.applicationStatus === 'in-progress' ? (
                           <>
-                            <Text style={{ fontSize: 13, color: '#4c6ef5', fontWeight: 600, marginBottom: 8 }}>작성 중</Text>
-                            <button
-                              type="button"
+                            <Text style={{ fontSize: 13, color: ACCENT, fontWeight: 600, marginBottom: 8 }}>작성 중</Text>
+                            <Button
+                              variant="solid"
+                              size="sm"
                               onClick={() => router.push(`/c/${trip.id}`)}
-                              className="solid-btn"
-                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: '#212529', color: 'white', border: 'none', fontWeight: 600 }}
+                              style={{ width: '100%' }}
                             >
                               계속 작성
-                            </button>
+                            </Button>
                           </>
                         ) : (
                           <>
-                            <Text style={{ fontSize: 13, color: '#4b5563', marginBottom: 8 }}>미작성</Text>
-                            <button style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }} data-outline>
+                            <Text style={{ fontSize: 13, color: MUTED, marginBottom: 8 }}>미작성</Text>
+                            <Button variant="outline" size="sm" style={{ width: '100%' }}>
                               작성하기
-                            </button>
+                            </Button>
                           </>
                         )}
                       </div>
 
                       {/* 보고서 */}
                       <div style={{ padding: '12px 16px' }}>
-                        <Text style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, marginBottom: 8 }}>보고서</Text>
+                        <Text style={{ fontSize: 13, color: MUTED, fontWeight: 600, marginBottom: 8 }}>보고서</Text>
                         {trip.reportStatus === 'done' ? (
                           <>
                             <Group gap={4} style={{ marginBottom: 8 }}>
-                              <IconCircleCheck size={14} color="#15803d" />
-                              <Text style={{ fontSize: 13, color: '#15803d', fontWeight: 600 }}>완료</Text>
+                              <IconCircleCheck size={14} color={RAW.done} />
+                              <Text style={{ fontSize: 13, color: DONE_COLOR, fontWeight: 600 }}>완료</Text>
                             </Group>
-                            <button
-                              type="button"
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => router.push(`/r/${trip.id}`)}
-                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }}
-                              data-outline
+                              style={{ width: '100%' }}
                             >
                               문서 보기
-                            </button>
+                            </Button>
                           </>
                         ) : trip.reportStatus === 'in-progress' ? (
                           <>
-                            <Text style={{ fontSize: 13, color: '#4c6ef5', fontWeight: 600, marginBottom: 8 }}>작성 중</Text>
-                            <button
-                              type="button"
+                            <Text style={{ fontSize: 13, color: ACCENT, fontWeight: 600, marginBottom: 8 }}>작성 중</Text>
+                            <Button
+                              variant="solid"
+                              size="sm"
                               onClick={() => router.push(`/r/${trip.id}`)}
-                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: '#212529', color: 'white', border: 'none', fontWeight: 600 }}
+                              style={{ width: '100%' }}
                             >
                               계속 작성
-                            </button>
+                            </Button>
                           </>
                         ) : (
                           <>
-                            <Text style={{ fontSize: 13, color: '#4b5563', marginBottom: 8 }}>미작성</Text>
-                            <button
-                              type="button"
+                            <Text style={{ fontSize: 13, color: MUTED, marginBottom: 8 }}>미작성</Text>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => router.push(`/r/${trip.id}`)}
-                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }}
-                              data-outline
+                              style={{ width: '100%' }}
                             >
                               작성하기
-                            </button>
+                            </Button>
                           </>
                         )}
                       </div>
@@ -778,7 +788,7 @@ export default function GeneratorForm() {
                     textAlign: 'center',
                   }}
                 >
-                  <Text fw={600} style={{ fontSize: 15, color: '#111827' }}>
+                  <Text fw={600} style={{ fontSize: 15, color: TEXT }}>
                     {allTrips.length === 0
                       ? '아직 만든 신청서가 없어요'
                       : '이 조건에 맞는 신청서가 없어요'}
@@ -820,7 +830,7 @@ export default function GeneratorForm() {
       >
         <Stack gap={16}>
           <div>
-            <Text fw={700} style={{ fontSize: 16, color: '#111827' }}>
+            <Text fw={700} style={{ fontSize: FZ.section, color: TEXT }}>
               어느 체험학습의 보고서를 쓸까요?
             </Text>
             <Text style={{ fontSize: 14, color: SUB, marginTop: 4, lineHeight: 1.55 }}>
@@ -846,14 +856,14 @@ export default function GeneratorForm() {
                   padding: '13px 14px',
                   borderRadius: 10,
                   cursor: 'pointer',
-                  border: '1px solid #e5e7eb',
+                  border: `1px solid ${BORDER}`,
                   backgroundColor: 'white',
                   textAlign: 'left',
                 }}
               >
                 <IconFileText size={17} color={SUB} style={{ flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Text fw={600} style={{ fontSize: 14, color: '#111827' }}>
+                  <Text fw={600} style={{ fontSize: 14, color: TEXT }}>
                     {trip.name}
                   </Text>
                   <Text style={{ fontSize: 13, color: SUB, marginTop: 2 }}>
@@ -861,7 +871,7 @@ export default function GeneratorForm() {
                   </Text>
                 </div>
                 {trip.reportStatus !== 'none' && (
-                  <Text style={{ fontSize: 13, color: '#15803d', fontWeight: 600, flexShrink: 0 }}>
+                  <Text style={{ fontSize: 13, color: DONE_COLOR, fontWeight: 600, flexShrink: 0 }}>
                     {trip.reportStatus === 'done' ? '완료' : '작성 중'}
                   </Text>
                 )}
@@ -870,9 +880,9 @@ export default function GeneratorForm() {
           </Stack>
 
           <Group justify="flex-end">
-            <button type="button" onClick={closeReportPicker} style={BTN_OUTLINE}>
+            <Button variant="outline" onClick={closeReportPicker}>
               닫기
-            </button>
+            </Button>
           </Group>
         </Stack>
       </Modal>
@@ -889,21 +899,20 @@ export default function GeneratorForm() {
         padding={22}
       >
         <Stack gap={16}>
-          <Text style={{ fontSize: 15, color: '#111827', lineHeight: 1.6 }}>{reportNotice}</Text>
+          <Text style={{ fontSize: 15, color: TEXT, lineHeight: 1.6 }}>{reportNotice}</Text>
           <Group justify="flex-end" gap={8}>
-            <button type="button" onClick={() => setReportNotice(null)} style={BTN_OUTLINE}>
+            <Button variant="outline" onClick={() => setReportNotice(null)}>
               닫기
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="solid"
               onClick={() => {
                 setReportNotice(null);
                 handleStartApplication();
               }}
-              style={BTN_PRIMARY}
             >
               신청서 작성하기
-            </button>
+            </Button>
           </Group>
         </Stack>
       </Modal>
@@ -920,32 +929,25 @@ export default function GeneratorForm() {
         padding={22}
       >
         <Stack gap={16}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: '#ffe3e3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <IconTrash size={20} color="#e03131" />
+          <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: RAW.dangerHover, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconTrash size={20} color={RAW.danger} />
           </div>
           <div>
-            <Text fw={700} style={{ fontSize: 15, color: '#111827' }}>이 체험학습을 삭제할까요?</Text>
+            <Text fw={700} style={{ fontSize: 15, color: TEXT }}>이 체험학습을 삭제할까요?</Text>
             <Text style={{ fontSize: 14, color: SUB, marginTop: 4, lineHeight: 1.6 }}>
               {pendingDeleteTrip?.name}의 신청서와 보고서가 함께 지워져요. 되돌릴 수 없어요.
             </Text>
           </div>
           <Group gap={8} justify="flex-end">
-            <button
-              type="button"
-              onClick={() => setPendingDeleteTrip(null)}
-              data-outline
-              style={{ ...BTN_BASE, padding: '0 18px', border: '1px solid #d1d5db', backgroundColor: 'white', color: LABEL_COLOR }}
-            >
+            <Button variant="outline" onClick={() => setPendingDeleteTrip(null)}>
               취소
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="danger"
               onClick={() => pendingDeleteTrip && handleDeleteTrip(pendingDeleteTrip.id)}
-              className="solid-btn"
-              style={{ ...BTN_BASE, padding: '0 18px', border: 'none', backgroundColor: '#e03131', color: 'white', fontWeight: 600 }}
             >
               삭제
-            </button>
+            </Button>
           </Group>
         </Stack>
       </Modal>
@@ -961,30 +963,20 @@ export default function GeneratorForm() {
         padding={22}
       >
         <Stack gap={16}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: '#ffe3e3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <IconTrash size={20} color="#e03131" />
+          <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: RAW.dangerHover, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconTrash size={20} color={RAW.danger} />
           </div>
           <div>
-            <Text fw={700} style={{ fontSize: 15, color: '#111827' }}>삭제할까요?</Text>
+            <Text fw={700} style={{ fontSize: 15, color: TEXT }}>삭제할까요?</Text>
             <Text style={{ fontSize: 14, color: SUB }}>{pendingDeleteStudent?.name} 학생 정보가 삭제됩니다.</Text>
           </div>
           <Group gap={8} justify="flex-end">
-            <button
-              type="button"
-              onClick={handleCancelDelete}
-              data-outline
-              style={{ ...BTN_BASE, padding: '0 18px', border: '1px solid #d1d5db', backgroundColor: 'white', color: LABEL_COLOR }}
-            >
+            <Button variant="outline" onClick={handleCancelDelete}>
               취소
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmDelete}
-              className="solid-btn"
-              style={{ ...BTN_BASE, padding: '0 18px', border: 'none', backgroundColor: '#e03131', color: 'white', fontWeight: 600 }}
-            >
+            </Button>
+            <Button variant="danger" onClick={handleConfirmDelete}>
               삭제
-            </button>
+            </Button>
           </Group>
         </Stack>
       </Modal>
@@ -1004,14 +996,14 @@ export default function GeneratorForm() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              border: '1px solid #e5e7eb',
+              border: `1px solid ${BORDER}`,
               borderRadius: 20,
               padding: '7px 8px 7px 14px',
               backgroundColor: 'white',
               boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
             }}
           >
-            <Text fw={600} style={{ fontSize: 14, color: '#111827' }}>{draggedStudent.name}</Text>
+            <Text fw={600} style={{ fontSize: 14, color: TEXT }}>{draggedStudent.name}</Text>
             <Text style={{ fontSize: 14, color: SUB }}>{draggedStudent.classInfo}</Text>
             <div
               style={{
@@ -1021,7 +1013,7 @@ export default function GeneratorForm() {
                 width: 24,
                 height: 24,
                 borderRadius: '50%',
-                color: '#6b7280',
+                color: MUTED,
               }}
             >
               <IconPencil size={14} />

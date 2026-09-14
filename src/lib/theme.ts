@@ -33,6 +33,14 @@ export const DONE_COLOR = g.DONE;
  */
 export const ACCENT = g.INK;
 
+/**
+ * 문서 종류 구분색. 신청서는 초록(DONE 계열), 보고서는 호박색을 쓴다.
+ * graphite 의 WARN 은 "비용 드는 모드가 켜짐" 이라는 다른 의미라 재사용하지 않고
+ * 프로젝트 토큰으로 둔다. graphite 를 도메인 개념으로 오염시키지 않기 위함.
+ */
+export const REPORT = '#d97706';
+export const REPORT_SOFT = '#fdf1e3';
+
 export const CARD_RADIUS = g.CARD_RADIUS;
 export const CARD_SHADOW = g.SHADOW.card;
 

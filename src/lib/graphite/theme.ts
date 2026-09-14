@@ -37,6 +37,8 @@ export const DONE = 'var(--g-done)';
 export const DONE_BG = 'var(--g-done-bg)';
 export const DANGER = 'var(--g-danger)';
 export const DANGER_BG = 'var(--g-danger-bg)';
+export const DANGER_HOVER = 'var(--g-danger-hover)';
+export const DANGER_ACTIVE = 'var(--g-danger-active)';
 export const WARN = 'var(--g-warn)';
 export const WARN_BG = 'var(--g-warn-bg)';
 
@@ -69,6 +71,8 @@ export const RAW = {
   doneBg: '#e8f8ee',
   danger: '#e03131',
   dangerBg: '#fff5f5',
+  dangerHover: '#ffd8d8',
+  dangerActive: '#ffc9c9',
   warn: '#f59f00',
   warnBg: '#fff9ec',
 } as const;
