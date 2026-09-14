@@ -162,7 +162,6 @@ export default function StudentModal({
               onClick={handleDeleteClick}
               className="danger-btn"
               style={{
-                background: 'none',
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 14,
@@ -179,7 +178,7 @@ export default function StudentModal({
               type="button"
               onClick={handleClose}
               data-outline
-              style={{ ...BTN_OUTLINE, padding: '9px 18px' }}
+              style={{ ...BTN_OUTLINE, padding: '0 18px' }}
             >
               취소
             </button>
@@ -190,7 +189,7 @@ export default function StudentModal({
               className={canSubmit ? 'solid-btn' : undefined}
               style={{
                 ...BTN_BASE,
-                padding: '9px 18px',
+                padding: '0 18px',
                 border: 'none',
                 backgroundColor: canSubmit ? DARK : '#e9ecef',
                 color: canSubmit ? 'white' : '#adb5bd',

@@ -11,6 +11,7 @@ import {
   Text,
   Title,
   Modal,
+  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -32,27 +33,31 @@ import {
 } from '@tabler/icons-react';
 import BrandMark from './BrandMark';
 import StudentModal from './StudentModal';
+import SettingsModal from './SettingsModal';
 import { createId, useDrafts, useStudents } from '@/lib/storage';
-import { createEmptyDraft, type Student, type Trip } from '@/lib/types';
+import { createEmptyDraft, toTrip, type Student, type Trip } from '@/lib/types';
+import {
+  BTN_BASE,
+  BTN_SMALL,
+  BTN_OUTLINE,
+  BTN_PRIMARY,
+  TOOLTIP_PROPS,
+  CARD_RADIUS,
+  CARD_SHADOW,
+  DONE_COLOR,
+  LABEL_COLOR,
+  SUB,
+} from '@/lib/theme';
 
-const trips: Trip[] = [
-  { id: '1', name: '제주도 가족여행', dateRange: '2026년 9월 18일 ~ 9월 20일 (3일)', student: '김배대', classInfo: '1학년 7반', applicationStatus: 'done', reportStatus: 'in-progress', reportProgress: '3/7', reportPercent: 43, lastEdited: '3분 전' },
-  { id: '2', name: '국립과학관 탐방', dateRange: '2026년 7월 12일 (1일)', student: '이서연', classInfo: '2학년 3반', applicationStatus: 'done', reportStatus: 'done', lastEdited: '1주 전' },
-  { id: '3', name: '전주 역사문화 탐방', dateRange: '2026년 5월 3일 ~ 5월 4일 (2일)', student: '박준호', classInfo: '1학년 2반', applicationStatus: 'done', reportStatus: 'done', lastEdited: '2개월 전' },
-];
+const TAB_KEYS = ['all', 'writing', 'done'] as const;
+type TabKey = (typeof TAB_KEYS)[number];
 
-const tabs = [
-  { key: 'all', label: '전체 (3)' },
-  { key: 'writing', label: '작성 중 (1)' },
-  { key: 'done', label: '완료 (2)' },
-] as const;
+const TAB_LABELS: Record<TabKey, string> = {
+  all: '전체',
+  writing: '작성 중',
+  done: '완료',
+};
 
-const SUB = '#404a57';
-const LABEL_COLOR = '#374151';
-const BTN_BASE: React.CSSProperties = { padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 500, lineHeight: 1 };
-const DONE_COLOR = '#15803d';
-const CARD_RADIUS = 'lg' as const;
-const CARD_SHADOW = '0 1px 3px rgba(0,0,0,0.04)';
 
 const transparentDragImage = typeof window !== 'undefined' ? new Image() : null;
 if (transparentDragImage) {
@@ -60,10 +65,17 @@ if (transparentDragImage) {
     'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 }
 
-type TabKey = (typeof tabs)[number]['key'];
 
-function TabSwitcher({ value, onChange }: { value: TabKey; onChange: (key: TabKey) => void }) {
-  const activeIndex = tabs.findIndex((t) => t.key === value);
+function TabSwitcher({
+  value,
+  onChange,
+  counts,
+}: {
+  value: TabKey;
+  onChange: (key: TabKey) => void;
+  counts: Record<TabKey, number>;
+}) {
+  const activeIndex = TAB_KEYS.indexOf(value);
   return (
     <div style={{ position: 'relative', display: 'inline-flex', backgroundColor: '#f1f3f5', borderRadius: 20, padding: 3 }}>
       <div
@@ -71,20 +83,20 @@ function TabSwitcher({ value, onChange }: { value: TabKey; onChange: (key: TabKe
           position: 'absolute',
           top: 3,
           bottom: 3,
-          left: `calc(${(activeIndex / tabs.length) * 100}% + 3px)`,
-          width: `calc(${100 / tabs.length}% - 6px)`,
+          left: `calc(${(activeIndex / TAB_KEYS.length) * 100}% + 3px)`,
+          width: `calc(${100 / TAB_KEYS.length}% - 6px)`,
           backgroundColor: '#212529',
           borderRadius: 18,
           transition: 'left 280ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       />
-      {tabs.map((tab) => {
-        const isActive = tab.key === value;
+      {TAB_KEYS.map((key) => {
+        const isActive = key === value;
         return (
           <button
-            key={tab.key}
+            key={key}
             type="button"
-            onClick={() => onChange(tab.key)}
+            onClick={() => onChange(key)}
             className="tab-btn"
             data-active={isActive}
             style={{
@@ -101,7 +113,7 @@ function TabSwitcher({ value, onChange }: { value: TabKey; onChange: (key: TabKe
               whiteSpace: 'nowrap',
             }}
           >
-            {tab.label}
+            {TAB_LABELS[key]} ({counts[key]})
           </button>
         );
       })}
@@ -112,10 +124,15 @@ function TabSwitcher({ value, onChange }: { value: TabKey; onChange: (key: TabKe
 
 export default function GeneratorForm() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]['key']>('all');
+  const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [studentList, setStudentList] = useStudents();
-  const [, setDrafts] = useDrafts();
+  const [drafts, setDrafts] = useDrafts();
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
+  const [reportPickerOpened, { open: openReportPicker, close: closeReportPicker }] =
+    useDisclosure(false);
+  const [reportNotice, setReportNotice] = useState<string | null>(null);
+  const [pendingDeleteTrip, setPendingDeleteTrip] = useState<Trip | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverTrash, setDragOverTrash] = useState(false);
@@ -298,10 +315,48 @@ export default function GeneratorForm() {
     setDeleteMode((prev) => !prev);
   };
 
+  const allTrips = Object.values(drafts)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((draft) => toTrip({ ...createEmptyDraft(draft.id), ...draft }, studentList));
+
+  const tripCounts: Record<TabKey, number> = {
+    all: allTrips.length,
+    writing: allTrips.filter((trip) => trip.applicationStatus !== 'done').length,
+    done: allTrips.filter((trip) => trip.applicationStatus === 'done').length,
+  };
+
+  const visibleTrips =
+    activeTab === 'all'
+      ? allTrips
+      : activeTab === 'done'
+        ? allTrips.filter((trip) => trip.applicationStatus === 'done')
+        : allTrips.filter((trip) => trip.applicationStatus !== 'done');
+
   const handleStartApplication = () => {
     const id = createId();
     setDrafts((prev) => ({ ...prev, [id]: createEmptyDraft(id) }));
     router.push(`/c/${id}`);
+  };
+
+  const handleDeleteTrip = (id: string) => {
+    setDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setPendingDeleteTrip(null);
+  };
+
+  const handleStartReport = () => {
+    if (allTrips.length === 0) {
+      setReportNotice('먼저 신청서를 작성해야 보고서를 쓸 수 있어요.');
+      return;
+    }
+    if (allTrips.length === 1) {
+      router.push(`/r/${allTrips[0].id}`);
+      return;
+    }
+    openReportPicker();
   };
 
   useEffect(() => {
@@ -334,7 +389,13 @@ export default function GeneratorForm() {
 
             {/* 설정 */}
             <Group justify="flex-end">
-              <button type="button" className="text-btn" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: SUB, fontSize: 14, padding: '6px 10px' }}>
+              <button
+                type="button"
+                className="text-btn"
+                onClick={openSettings}
+                aria-label="설정 열기"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', cursor: 'pointer', color: SUB, fontSize: 14, padding: '6px 10px', borderRadius: 8 }}
+              >
                 <IconSettings size={16} />
                 설정
               </button>
@@ -379,7 +440,16 @@ export default function GeneratorForm() {
                 </div>
               </Paper>
 
-              <Paper withBorder radius={CARD_RADIUS} p="md" className="card-hover" style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW, cursor: 'pointer' }}>
+              <Paper
+                withBorder
+                radius={CARD_RADIUS}
+                p="md"
+                className="card-hover"
+                component="button"
+                type="button"
+                onClick={handleStartReport}
+                style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#fdf1e3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <IconFileText size={22} color="#d97706" />
@@ -506,7 +576,6 @@ export default function GeneratorForm() {
                             height: 24,
                             borderRadius: '50%',
                             border: 'none',
-                            background: 'none',
                             cursor: 'pointer',
                             color: '#6b7280',
                           }}
@@ -542,6 +611,12 @@ export default function GeneratorForm() {
                   </button>
                 )}
               </div>
+
+              {studentList.length === 0 && (
+                <Text style={{ fontSize: 14, color: SUB, marginTop: 12, lineHeight: 1.55 }}>
+                  아직 등록한 학생이 없어요. 학생을 추가하면 신청서에 바로 쓸 수 있어요.
+                </Text>
+              )}
             </Paper>
 
             {/* 최근 체험학습 */}
@@ -552,27 +627,52 @@ export default function GeneratorForm() {
                   <Text fw={700} style={{ fontSize: 16, color: '#111827' }}>최근 체험학습</Text>
                 </Group>
                 <div className="hidden-mobile">
-                  <TabSwitcher value={activeTab} onChange={setActiveTab} />
+                  <TabSwitcher value={activeTab} onChange={setActiveTab} counts={tripCounts} />
                 </div>
               </Group>
 
               <div className="visible-mobile">
-                <TabSwitcher value={activeTab} onChange={setActiveTab} />
+                <TabSwitcher value={activeTab} onChange={setActiveTab} counts={tripCounts} />
               </div>
 
               <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-                {trips.map((trip) => (
+                {visibleTrips.map((trip) => (
                   <Paper key={trip.id} withBorder radius={CARD_RADIUS} className="card-hover fade-up" style={{ backgroundColor: 'white', boxShadow: CARD_SHADOW, overflow: 'hidden' }}>
                     {/* 상단: 문서 정보 */}
                     <div style={{ padding: '16px 16px 14px', borderBottom: '1px solid #f3f4f6' }}>
-                      <Text fw={700} style={{ fontSize: 15, color: '#111827', marginBottom: 6 }}>{trip.name}</Text>
+                      <Group justify="space-between" align="flex-start" gap={8} wrap="nowrap">
+                        <Text fw={700} style={{ fontSize: 15, color: '#111827', marginBottom: 6, flex: 1, minWidth: 0 }}>{trip.name}</Text>
+                        <Tooltip label="이 체험학습을 삭제해요" {...TOOLTIP_PROPS}>
+                          <button
+                            type="button"
+                            onClick={() => setPendingDeleteTrip(trip)}
+                            aria-label={`${trip.name} 삭제`}
+                            className="trip-delete"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 28,
+                              height: 28,
+                              borderRadius: 8,
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              cursor: 'pointer',
+                              color: SUB,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <IconTrash size={15} />
+                          </button>
+                        </Tooltip>
+                      </Group>
                       <Group gap={4}>
                         <IconCalendarEvent size={12} color="#4b5563" />
                         <Text style={{ fontSize: 13, color: SUB }}>{trip.dateRange}</Text>
                       </Group>
                       <Group gap={4} style={{ marginTop: 2 }}>
                         <IconUser size={12} color="#4b5563" />
-                        <Text style={{ fontSize: 13, color: SUB }}>{trip.student} · {trip.classInfo}</Text>
+                        <Text style={{ fontSize: 13, color: SUB }}>{trip.student}</Text>
                       </Group>
                     </div>
 
@@ -587,21 +687,31 @@ export default function GeneratorForm() {
                               <IconCircleCheck size={14} color="#15803d" />
                               <Text style={{ fontSize: 13, color: '#15803d', fontWeight: 600 }}>완료</Text>
                             </Group>
-                            <button style={{ ...BTN_BASE, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db', padding: '6px 0', fontSize: 13 }} data-outline>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/c/${trip.id}`)}
+                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }}
+                              data-outline
+                            >
                               문서 보기
                             </button>
                           </>
                         ) : trip.applicationStatus === 'in-progress' ? (
                           <>
                             <Text style={{ fontSize: 13, color: '#4c6ef5', fontWeight: 600, marginBottom: 8 }}>작성 중</Text>
-                            <button style={{ ...BTN_BASE, width: '100%', backgroundColor: '#212529', color: 'white', border: 'none', fontWeight: 600, padding: '6px 0', fontSize: 13 }}>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/c/${trip.id}`)}
+                              className="solid-btn"
+                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: '#212529', color: 'white', border: 'none', fontWeight: 600 }}
+                            >
                               계속 작성
                             </button>
                           </>
                         ) : (
                           <>
                             <Text style={{ fontSize: 13, color: '#4b5563', marginBottom: 8 }}>미작성</Text>
-                            <button style={{ ...BTN_BASE, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db', padding: '6px 0', fontSize: 13 }} data-outline>
+                            <button style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }} data-outline>
                               작성하기
                             </button>
                           </>
@@ -617,21 +727,35 @@ export default function GeneratorForm() {
                               <IconCircleCheck size={14} color="#15803d" />
                               <Text style={{ fontSize: 13, color: '#15803d', fontWeight: 600 }}>완료</Text>
                             </Group>
-                            <button style={{ ...BTN_BASE, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db', padding: '6px 0', fontSize: 13 }} data-outline>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/r/${trip.id}`)}
+                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }}
+                              data-outline
+                            >
                               문서 보기
                             </button>
                           </>
                         ) : trip.reportStatus === 'in-progress' ? (
                           <>
-                            <Text style={{ fontSize: 13, color: '#4c6ef5', fontWeight: 600, marginBottom: 8 }}>{trip.reportProgress} 단계</Text>
-                            <button style={{ ...BTN_BASE, width: '100%', backgroundColor: '#212529', color: 'white', border: 'none', fontWeight: 600, padding: '6px 0', fontSize: 13 }}>
+                            <Text style={{ fontSize: 13, color: '#4c6ef5', fontWeight: 600, marginBottom: 8 }}>작성 중</Text>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/r/${trip.id}`)}
+                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: '#212529', color: 'white', border: 'none', fontWeight: 600 }}
+                            >
                               계속 작성
                             </button>
                           </>
                         ) : (
                           <>
                             <Text style={{ fontSize: 13, color: '#4b5563', marginBottom: 8 }}>미작성</Text>
-                            <button style={{ ...BTN_BASE, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db', padding: '6px 0', fontSize: 13 }} data-outline>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/r/${trip.id}`)}
+                              style={{ ...BTN_SMALL, width: '100%', backgroundColor: 'white', color: LABEL_COLOR, border: '1px solid #d1d5db' }}
+                              data-outline
+                            >
                               작성하기
                             </button>
                           </>
@@ -641,6 +765,31 @@ export default function GeneratorForm() {
                   </Paper>
                 ))}
               </SimpleGrid>
+
+              {visibleTrips.length === 0 && (
+                <Paper
+                  withBorder
+                  radius={CARD_RADIUS}
+                  className="fade-up"
+                  style={{
+                    backgroundColor: 'white',
+                    boxShadow: CARD_SHADOW,
+                    padding: '38px 20px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Text fw={600} style={{ fontSize: 15, color: '#111827' }}>
+                    {allTrips.length === 0
+                      ? '아직 만든 신청서가 없어요'
+                      : '이 조건에 맞는 신청서가 없어요'}
+                  </Text>
+                  <Text style={{ fontSize: 14, color: SUB, marginTop: 6, lineHeight: 1.55 }}>
+                    {allTrips.length === 0
+                      ? '위에서 체험학습 신청서를 만들어보세요.'
+                      : '다른 탭을 확인해 보세요.'}
+                  </Text>
+                </Paper>
+              )}
             </Stack>
 
           </Stack>
@@ -656,9 +805,153 @@ export default function GeneratorForm() {
         student={editingStudent}
       />
 
+      <SettingsModal opened={settingsOpened} onCloseAction={closeSettings} />
+
       <Modal
-        opened={pendingDeleteStudent !== null}
-        onClose={handleCancelDelete}
+        opened={reportPickerOpened}
+        onClose={closeReportPicker}
+        centered
+        radius="lg"
+        size={400}
+        withCloseButton={false}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
+        transitionProps={{ transition: 'pop', duration: 220, timingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+        padding={22}
+      >
+        <Stack gap={16}>
+          <div>
+            <Text fw={700} style={{ fontSize: 16, color: '#111827' }}>
+              어느 체험학습의 보고서를 쓸까요?
+            </Text>
+            <Text style={{ fontSize: 14, color: SUB, marginTop: 4, lineHeight: 1.55 }}>
+              신청서에 적은 장소와 기간을 그대로 가져와요.
+            </Text>
+          </div>
+
+          <Stack gap={8}>
+            {allTrips.map((trip) => (
+              <button
+                key={trip.id}
+                type="button"
+                className="setting-option"
+                onClick={() => {
+                  closeReportPicker();
+                  router.push(`/r/${trip.id}`);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '13px 14px',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'white',
+                  textAlign: 'left',
+                }}
+              >
+                <IconFileText size={17} color={SUB} style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text fw={600} style={{ fontSize: 14, color: '#111827' }}>
+                    {trip.name}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: SUB, marginTop: 2 }}>
+                    {trip.dateRange} · {trip.student}
+                  </Text>
+                </div>
+                {trip.reportStatus !== 'none' && (
+                  <Text style={{ fontSize: 13, color: '#15803d', fontWeight: 600, flexShrink: 0 }}>
+                    {trip.reportStatus === 'done' ? '완료' : '작성 중'}
+                  </Text>
+                )}
+              </button>
+            ))}
+          </Stack>
+
+          <Group justify="flex-end">
+            <button type="button" onClick={closeReportPicker} style={BTN_OUTLINE}>
+              닫기
+            </button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={reportNotice !== null}
+        onClose={() => setReportNotice(null)}
+        centered
+        radius="lg"
+        size={340}
+        withCloseButton={false}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
+        transitionProps={{ transition: 'pop', duration: 220, timingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+        padding={22}
+      >
+        <Stack gap={16}>
+          <Text style={{ fontSize: 15, color: '#111827', lineHeight: 1.6 }}>{reportNotice}</Text>
+          <Group justify="flex-end" gap={8}>
+            <button type="button" onClick={() => setReportNotice(null)} style={BTN_OUTLINE}>
+              닫기
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setReportNotice(null);
+                handleStartApplication();
+              }}
+              style={BTN_PRIMARY}
+            >
+              신청서 작성하기
+            </button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={pendingDeleteTrip !== null}
+        onClose={() => setPendingDeleteTrip(null)}
+        centered
+        radius="lg"
+        size={360}
+        withCloseButton={false}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
+        transitionProps={{ transition: 'pop', duration: 220, timingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+        padding={22}
+      >
+        <Stack gap={16}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: '#ffe3e3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IconTrash size={20} color="#e03131" />
+          </div>
+          <div>
+            <Text fw={700} style={{ fontSize: 15, color: '#111827' }}>이 체험학습을 삭제할까요?</Text>
+            <Text style={{ fontSize: 14, color: SUB, marginTop: 4, lineHeight: 1.6 }}>
+              {pendingDeleteTrip?.name}의 신청서와 보고서가 함께 지워져요. 되돌릴 수 없어요.
+            </Text>
+          </div>
+          <Group gap={8} justify="flex-end">
+            <button
+              type="button"
+              onClick={() => setPendingDeleteTrip(null)}
+              data-outline
+              style={{ ...BTN_BASE, padding: '0 18px', border: '1px solid #d1d5db', backgroundColor: 'white', color: LABEL_COLOR }}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={() => pendingDeleteTrip && handleDeleteTrip(pendingDeleteTrip.id)}
+              className="solid-btn"
+              style={{ ...BTN_BASE, padding: '0 18px', border: 'none', backgroundColor: '#e03131', color: 'white', fontWeight: 600 }}
+            >
+              삭제
+            </button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={pendingDeleteStudent !== null}        onClose={handleCancelDelete}
         centered
         radius="lg"
         size={340}
@@ -680,7 +973,7 @@ export default function GeneratorForm() {
               type="button"
               onClick={handleCancelDelete}
               data-outline
-              style={{ ...BTN_BASE, padding: '9px 18px', border: '1px solid #d1d5db', backgroundColor: 'white', color: LABEL_COLOR }}
+              style={{ ...BTN_BASE, padding: '0 18px', border: '1px solid #d1d5db', backgroundColor: 'white', color: LABEL_COLOR }}
             >
               취소
             </button>
@@ -688,7 +981,7 @@ export default function GeneratorForm() {
               type="button"
               onClick={handleConfirmDelete}
               className="solid-btn"
-              style={{ ...BTN_BASE, padding: '9px 18px', border: 'none', backgroundColor: '#e03131', color: 'white', fontWeight: 600 }}
+              style={{ ...BTN_BASE, padding: '0 18px', border: 'none', backgroundColor: '#e03131', color: 'white', fontWeight: 600 }}
             >
               삭제
             </button>
