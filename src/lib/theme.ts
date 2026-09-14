@@ -41,6 +41,16 @@ export const ACCENT = g.INK;
 export const REPORT = '#d97706';
 export const REPORT_SOFT = '#fdf1e3';
 
+/**
+ * 로고 전용 파란색. UI 크롬은 무채색이고 강조는 잉크가 맡는다(ACCENT 참고).
+ * graphite 가 아니라 여기 있는 이유: 재사용 가능한 디자인 시스템에 특정
+ * 제품의 브랜드색이 들어가면 다른 프로젝트에서 의미 없는 값이 된다.
+ *
+ * SVG presentation 속성에 들어가므로 var() 가 아닌 리터럴이어야 한다.
+ */
+export const BRAND = '#4c6ef5';
+export const BRAND_SOFT = '#93aef2';
+
 export const CARD_RADIUS = g.CARD_RADIUS;
 export const CARD_SHADOW = g.SHADOW.card;
 

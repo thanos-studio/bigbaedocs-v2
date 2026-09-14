@@ -69,7 +69,7 @@ import {
   LABEL_COLOR,
   TOOLTIP_PROPS,
 } from '@/lib/theme';
-import { BORDER_HOVER, FAINT, FZ, ON_INK_SUB, RAW } from '@/lib/graphite/theme';
+import { BORDER_HOVER, FAINT, FZ, ON_INK_SUB, R, RAW } from '@/lib/graphite/theme';
 import { Button } from '@/lib/graphite/components';
 import AgentSidebar, { type WritingOptionState } from './AgentSidebar';
 import ShareModal from './ShareModal';
@@ -264,7 +264,7 @@ function PolishButton({
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          borderRadius: 20,
+          borderRadius: R.pill,
           padding: '7px 14px',
           fontSize: 13,
           fontWeight: 500,
@@ -1173,7 +1173,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: 8,
-                            borderRadius: 20,
+                            borderRadius: R.pill,
                             padding: '7px 14px',
                           }}
                         >
@@ -1197,7 +1197,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                         alignItems: 'center',
                         gap: 6,
                         border: `1px dashed ${BORDER_HOVER}`,
-                        borderRadius: 20,
+                        borderRadius: R.pill,
                         padding: '7px 16px',
                         backgroundColor: 'transparent',
                         fontSize: 14,
@@ -1245,7 +1245,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: 7,
-                                borderRadius: 20,
+                                borderRadius: R.pill,
                                 padding: '8px 16px',
                                 fontSize: 14,
                                 fontWeight: 500,
@@ -1409,7 +1409,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                                 gap: 11,
                                 width: '100%',
                                 textAlign: 'left',
-                                borderRadius: 10,
+                                borderRadius: R.md,
                                 padding: '10px 12px',
                                 cursor: 'pointer',
                               }}
@@ -1440,7 +1440,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                                   gap: 11,
                                   width: '100%',
                                   textAlign: 'left',
-                                  borderRadius: 10,
+                                  borderRadius: R.md,
                                   padding: '10px 12px',
                                   cursor: 'pointer',
                                 }}
@@ -1474,7 +1474,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                                 gap: 11,
                                 width: '100%',
                                 textAlign: 'left',
-                                borderRadius: 10,
+                                borderRadius: R.md,
                                 padding: '10px 12px',
                                 cursor: 'pointer',
                               }}
@@ -1870,7 +1870,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                       <div
                         style={{
                           border: `1px dashed ${BORDER}`,
-                          borderRadius: 10,
+                          borderRadius: R.md,
                           padding: '30px 0',
                           textAlign: 'center',
                         }}
@@ -2220,7 +2220,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                 gap: 10,
                 width: '100%',
                 padding: '13px 14px',
-                borderRadius: 10,
+                borderRadius: R.md,
                 cursor: 'pointer',
                 textAlign: 'left',
               }}

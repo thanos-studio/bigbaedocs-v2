@@ -57,7 +57,7 @@ export function HwpxViewer({ bytes, maxHeight = 460 }: { bytes: Uint8Array; maxH
       <div
         style={{
           border: `1px solid ${BORDER}`,
-          borderRadius: 10,
+          borderRadius: R.md,
           backgroundColor: HOVER,
           height: maxHeight,
           overflowY: 'auto',

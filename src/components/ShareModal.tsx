@@ -156,7 +156,7 @@ export default function ShareModal({
                     fontSize: 12,
                     color: SUB,
                     padding: '3px 9px',
-                    borderRadius: 20,
+                    borderRadius: R.pill,
                     backgroundColor: 'white',
                     border: `1px solid ${BORDER}`,
                   }}

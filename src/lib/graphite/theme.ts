@@ -78,8 +78,6 @@ export const RAW = {
   warn: '#f59f00',
   warnBg: '#fff9ec',
   warnText: '#b8730a',
-  brand: '#4c6ef5',
-  brandSoft: '#93aef2',
 } as const;
 
 /* -------------------------------------------------------------------- type -- */

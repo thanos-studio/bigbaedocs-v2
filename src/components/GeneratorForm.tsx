@@ -86,7 +86,7 @@ function TabSwitcher({
 }) {
   const activeIndex = TAB_KEYS.indexOf(value);
   return (
-    <div style={{ position: 'relative', display: 'inline-flex', backgroundColor: SURFACE_SOFT, borderRadius: 20, padding: 3 }}>
+    <div style={{ position: 'relative', display: 'inline-flex', backgroundColor: SURFACE_SOFT, borderRadius: R.pill, padding: 3 }}>
       <div
         style={{
           position: 'absolute',
@@ -95,7 +95,7 @@ function TabSwitcher({
           left: `calc(${(activeIndex / TAB_KEYS.length) * 100}% + 3px)`,
           width: `calc(${100 / TAB_KEYS.length}% - 6px)`,
           backgroundColor: DARK,
-          borderRadius: 18,
+          borderRadius: R.pill,
           transition: 'left 280ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       />
@@ -562,7 +562,7 @@ export default function GeneratorForm() {
                         alignItems: 'center',
                         gap: 8,
                         border: `1px solid ${BORDER}`,
-                        borderRadius: 20,
+                        borderRadius: R.pill,
                         padding: deleteMode ? '7px 14px' : '7px 8px 7px 14px',
                         backgroundColor: 'white',
                         cursor: deleteMode ? 'pointer' : undefined,
@@ -606,7 +606,7 @@ export default function GeneratorForm() {
                       alignItems: 'center',
                       gap: 6,
                       border: `1px dashed ${BORDER_HOVER}`,
-                      borderRadius: 20,
+                      borderRadius: R.pill,
                       padding: '7px 16px',
                       backgroundColor: 'transparent',
                       cursor: 'pointer',
@@ -854,7 +854,7 @@ export default function GeneratorForm() {
                   gap: 10,
                   width: '100%',
                   padding: '13px 14px',
-                  borderRadius: 10,
+                  borderRadius: R.md,
                   cursor: 'pointer',
                   border: `1px solid ${BORDER}`,
                   backgroundColor: 'white',
@@ -997,7 +997,7 @@ export default function GeneratorForm() {
               alignItems: 'center',
               gap: 8,
               border: `1px solid ${BORDER}`,
-              borderRadius: 20,
+              borderRadius: R.pill,
               padding: '7px 8px 7px 14px',
               backgroundColor: 'white',
               boxShadow: SHADOW.drag,

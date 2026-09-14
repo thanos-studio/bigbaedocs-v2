@@ -45,7 +45,7 @@ import {
   DONE_COLOR,
   DANGER,
 } from '@/lib/theme';
-import { RAW, FZ, WARN_TEXT } from '@/lib/graphite/theme';
+import { RAW, FZ, R, WARN_TEXT } from '@/lib/graphite/theme';
 import { Button } from '@/lib/graphite/components';
 import { createId } from '@/lib/storage';
 
@@ -270,7 +270,7 @@ function MessageAttachments({
               width: 108,
               height: 108,
               objectFit: 'cover',
-              borderRadius: 10,
+              borderRadius: R.md,
               border: `1px solid ${BORDER}`,
               display: 'block',
             }}
@@ -284,7 +284,7 @@ function MessageAttachments({
               gap: 7,
               maxWidth: 200,
               padding: '8px 10px',
-              borderRadius: 10,
+              borderRadius: R.md,
               border: `1px solid ${BORDER}`,
               backgroundColor: 'white',
             }}
@@ -582,7 +582,7 @@ function ToolCallRow({ call, isLast }: { call: ToolCall; isLast: boolean }) {
                   fontSize: 12,
                   color: SUB,
                   padding: '2px 7px',
-                  borderRadius: 5,
+                  borderRadius: R.sm,
                   backgroundColor: 'white',
                   border: `1px solid ${BORDER}`,
                 }}
@@ -903,7 +903,7 @@ export default function AgentSidebar({
                     alignItems: 'center',
                     gap: 7,
                     alignSelf: 'flex-start',
-                    borderRadius: 20,
+                    borderRadius: R.pill,
                     padding: '8px 14px',
                     fontSize: 13,
                     color: LABEL_COLOR,
@@ -978,7 +978,7 @@ export default function AgentSidebar({
                       fontSize: 14,
                       lineHeight: 1.55,
                       whiteSpace: isUser ? 'pre-wrap' : 'normal',
-                      borderRadius: 14,
+                      borderRadius: R.panel,
                       ...(isUser
                         ? {
                             backgroundColor: DARK,
@@ -1074,7 +1074,7 @@ export default function AgentSidebar({
                         width: 60,
                         height: 60,
                         objectFit: 'cover',
-                        borderRadius: 10,
+                        borderRadius: R.md,
                         border: `1px solid ${BORDER}`,
                         display: 'block',
                       }}
@@ -1089,7 +1089,7 @@ export default function AgentSidebar({
                         maxWidth: 190,
                         backgroundColor: SURFACE_SOFT,
                         border: `1px solid ${BORDER}`,
-                        borderRadius: 10,
+                        borderRadius: R.md,
                         padding: '0 10px',
                         fontSize: 12,
                         color: LABEL_COLOR,

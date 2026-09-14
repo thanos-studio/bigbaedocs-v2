@@ -1,3 +1,4 @@
+import { BRAND, BRAND_SOFT } from '@/lib/theme';
 import { RAW } from '@/lib/graphite/theme';
 
 type BrandMarkProps = {
@@ -17,8 +18,8 @@ const VIEW_H = 64;
 export default function BrandMark({
   height = 84,
   documentColor = RAW.text,
-  lineColor = RAW.brandSoft,
-  accentColor = RAW.brand,
+  lineColor = BRAND_SOFT,
+  accentColor = BRAND,
 }: BrandMarkProps) {
   return (
     <svg

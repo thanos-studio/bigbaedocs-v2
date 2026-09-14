@@ -243,7 +243,7 @@ function PolishButton({
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          borderRadius: 20,
+          borderRadius: R.pill,
           padding: '7px 14px',
           fontSize: 13,
           fontWeight: 500,
@@ -1353,7 +1353,7 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
                       <div
                         style={{
                           border: `1px dashed ${BORDER}`,
-                          borderRadius: 10,
+                          borderRadius: R.md,
                           padding: '30px 0',
                           textAlign: 'center',
                         }}
@@ -1689,7 +1689,7 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
                 gap: 10,
                 width: '100%',
                 padding: '13px 14px',
-                borderRadius: 10,
+                borderRadius: R.md,
                 cursor: 'pointer',
                 textAlign: 'left',
               }}
@@ -1718,7 +1718,7 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
                 gap: 10,
                 width: '100%',
                 padding: '13px 14px',
-                borderRadius: 10,
+                borderRadius: R.md,
                 cursor: printing !== null ? 'not-allowed' : 'pointer',
                 textAlign: 'left',
                 opacity: printing !== null ? 0.55 : 1,
