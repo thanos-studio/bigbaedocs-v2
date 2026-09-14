@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# rhwp wasm은 postinstall로 복사한다
+public/rhwp_bg.wasm

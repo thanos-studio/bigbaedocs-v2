@@ -5,7 +5,6 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { ViewTransition } from 'react';
 import localFont from 'next/font/local';
-import Script from "next/script";
 import { ColorSchemeScript, MantineProvider, createTheme, mantineHtmlProps } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 
@@ -30,13 +29,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" className={suit.variable} {...mantineHtmlProps}>
       <head>
-        {process.env.NODE_ENV === "development" && (
-          <Script
-            src="//unpkg.com/react-grab/dist/index.global.js"
-            crossOrigin="anonymous"
-            strategy="beforeInteractive"
-          />
-        )}
         <ColorSchemeScript defaultColorScheme="light" />
       </head>
       <body>
