@@ -1,0 +1,64 @@
+/* ------------------------------------------------------------ keyframes ---- */
+
+@keyframes g-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes g-step-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes g-pop-in {
+  from { opacity: 0; transform: scale(0.86) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes g-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes g-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes g-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes g-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.88); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes g-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+/* Entrance utilities.
+ *
+ * `backwards`, not `both`. `backwards` holds the from-state during an
+ * animation-delay, so a staggered list does not flash at full opacity before
+ * its turn. `both` would additionally pin the to-state forever, and a filling
+ * animation outranks every transition - so an element carrying both an entrance
+ * and `.g-leave` would vanish instantly instead of fading out. */
+.g-fade-up { animation: g-fade-up var(--g-t-enter) var(--g-ease-out) backwards; }
+.g-step-in { animation: g-step-in 240ms var(--g-ease) backwards; }
+.g-pop-in { animation: g-pop-in 200ms var(--g-ease-back) backwards; }
+.g-spin { animation: g-spin 700ms linear infinite; }
+.g-pulse { animation: g-pulse 1s ease-in-out infinite; }
+
+/* Exit. Pair with useLeaving() - set data-leaving, wait --g-t-exit, unmount. */
+.g-leave {
+  transition: opacity var(--g-t-exit) ease, transform var(--g-t-exit) ease;
+}
+.g-leave[data-leaving='true'] {
+  opacity: 0;
+  transform: scale(0.82);
+  pointer-events: none;
+}

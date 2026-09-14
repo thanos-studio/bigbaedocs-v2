@@ -1,0 +1,8 @@
+/* ------------------------------------------------- route transitions ---- */
+
+::view-transition-old(root) {
+  animation: g-fade-out 180ms var(--g-ease) both;
+}
+::view-transition-new(root) {
+  animation: g-fade-in var(--g-t-enter) var(--g-ease) both;
+}

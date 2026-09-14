@@ -1,0 +1,127 @@
+/* --------------------------------------------------------------- button ---- */
+
+/*
+ * Each variant owns background, colour AND border here - every property that
+ * changes on :hover. components/Button.tsx contributes only geometry, because
+ * an inline value for any of these outranks the rules below and the button
+ * stops responding. Measured, not theorised: an inline `color` is what kept
+ * ghost buttons from darkening their label on hover.
+ */
+
+/* Filled primary. Lifts and brightens - never just fades. */
+.g-btn-solid {
+  cursor: pointer;
+  background-color: var(--g-ink);
+  color: var(--g-surface);
+  border: none;
+  transition: transform var(--g-t-fast) ease, background-color var(--g-t-fast) ease,
+    filter var(--g-t-fast) ease;
+}
+.g-btn-solid:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.12);
+}
+.g-btn-solid:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
+/* Bordered secondary. */
+.g-btn-outline {
+  cursor: pointer;
+  background-color: var(--g-surface);
+  color: var(--g-label);
+  border: 1px solid var(--g-border-hover);
+  transition: background-color var(--g-t) ease, border-color var(--g-t) ease,
+    color var(--g-t) ease;
+}
+.g-btn-outline:hover:not(:disabled) {
+  background-color: var(--g-hover);
+  border-color: var(--g-ink);
+  color: var(--g-text);
+}
+.g-btn-outline:active:not(:disabled) {
+  background-color: var(--g-active);
+}
+
+/* Transparent. Uses the ink tint, not a solid grey: on a #f0f2f5 page a solid
+ * #f1f3f5 hover is invisible. */
+.g-btn-ghost {
+  cursor: pointer;
+  background-color: transparent;
+  color: var(--g-sub);
+  border: none;
+  transition: background-color var(--g-t-fast) ease, color var(--g-t-fast) ease;
+  border-radius: var(--g-r);
+}
+.g-btn-ghost:hover:not(:disabled) {
+  background-color: var(--g-ink-tint);
+  color: var(--g-text);
+}
+.g-btn-ghost:active:not(:disabled) {
+  background-color: var(--g-ink-tint-strong);
+}
+.g-btn-ghost[data-active='true'] {
+  background-color: var(--g-ink-tint-strong);
+  color: var(--g-text);
+}
+
+/* Destructive confirm - the button that actually deletes. Filled, so it reads
+ * as the weightiest thing in a footer. */
+.g-btn-danger {
+  cursor: pointer;
+  background-color: var(--g-danger);
+  color: var(--g-surface);
+  border: none;
+  transition: transform var(--g-t-fast) ease, filter var(--g-t-fast) ease;
+}
+.g-btn-danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+.g-btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
+/* Destructive entry point - the "삭제" that opens a confirmation. Transparent,
+ * because it must not compete with the primary action beside it. */
+.g-btn-danger-ghost {
+  cursor: pointer;
+  background-color: transparent;
+  color: var(--g-danger);
+  border: none;
+  transition: background-color var(--g-t-fast) ease;
+}
+.g-btn-danger-ghost:hover:not(:disabled) {
+  background-color: var(--g-danger-hover);
+}
+.g-btn-danger-ghost:active:not(:disabled) {
+  background-color: var(--g-danger-active);
+}
+
+/* Icon button that wobbles on hover - for a destructive-mode or drop target,
+ * where you want the affordance to feel alive before it is used. */
+.g-nudge {
+  transition: transform var(--g-t-fast) ease, background-color var(--g-t-fast) ease,
+    color var(--g-t-fast) ease;
+}
+.g-nudge:hover:not(:disabled) {
+  animation: g-shake 260ms ease-in-out infinite;
+}
+
+/* Disabled, for every variant. Here rather than inline so it beats the variant's
+ * own background without needing !important, and so the hover rules - already
+ * :not(:disabled) guarded - simply do not apply. */
+.g-btn-solid:disabled,
+.g-btn-outline:disabled,
+.g-btn-ghost:disabled,
+.g-btn-danger:disabled,
+.g-btn-danger-ghost:disabled {
+  background-color: var(--g-hover);
+  color: var(--g-faint);
+  border-color: transparent;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}

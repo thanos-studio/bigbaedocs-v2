@@ -1,0 +1,113 @@
+/* ----------------------------------------------------------------- card ---- */
+
+/* Surface, border and shadow all live here rather than inline, because each of
+ * them changes on .g-card-link:hover and an inline value would win. */
+.g-card {
+  background-color: var(--g-surface);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-r-card);
+  box-shadow: var(--g-shadow-card);
+  box-sizing: border-box;
+}
+
+/* Status tints. Fixed set - green means done, amber means a costly mode is on,
+ * red means destructive. Never decoration. */
+.g-card[data-tone='done'] {
+  background-color: var(--g-done-bg);
+  border-color: var(--g-done-bg);
+}
+.g-card[data-tone='warn'] {
+  background-color: var(--g-warn-bg);
+  border-color: var(--g-warn);
+}
+.g-card[data-tone='danger'] {
+  background-color: var(--g-danger-bg);
+  border-color: var(--g-danger);
+}
+
+/* Only for cards that are actually clickable. A hover lift on a static card is
+ * a lie about interactivity. */
+.g-card-link {
+  cursor: pointer;
+  transition: box-shadow var(--g-t-fast) ease, border-color var(--g-t-fast) ease,
+    transform var(--g-t-fast) ease;
+}
+.g-card-link:hover {
+  box-shadow: var(--g-shadow-lift);
+  border-color: var(--g-border-hover);
+  transform: translateY(-1px);
+}
+.g-card-link:active {
+  transform: translateY(0);
+}
+
+/* Row in a list of choices - settings, model pickers, search results.
+ * Border marks the selection; background stays white so a long list of picked
+ * rows does not turn into a wall of colour. */
+.g-option {
+  border: 1px solid var(--g-border);
+  background-color: var(--g-surface);
+  border-radius: var(--g-r);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--g-t-fast) ease, background-color var(--g-t-fast) ease;
+}
+.g-option:hover {
+  background-color: var(--g-hover);
+  border-color: var(--g-border-hover);
+}
+.g-option:active {
+  background-color: var(--g-active);
+}
+.g-option[data-picked='true'] {
+  border-color: var(--g-ink);
+}
+
+/* ---------------------------------------------------------------- input ---- */
+
+/* Wrapper that owns the focus ring, so a textarea plus a toolbar read as one
+ * field. Put the ring on the container, never on the inner textarea. */
+.g-field {
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-r-panel);
+  background-color: var(--g-surface);
+  transition: border-color var(--g-t) ease, box-shadow var(--g-t) ease;
+}
+.g-field:focus-within {
+  border-color: #94a3b8;
+  box-shadow: var(--g-ring);
+}
+.g-field textarea,
+.g-field input {
+  background-color: transparent;
+}
+
+/* Text that becomes an input on click. The transparent bottom border reserves
+ * the space, so revealing it on hover does not shift the layout. */
+.g-inline-edit {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: text;
+  transition: border-color var(--g-t-fast) ease;
+}
+.g-inline-edit:hover {
+  border-bottom-color: var(--g-border-hover);
+}
+
+/* Reveals content of unknown height. 0fr -> 1fr is transitionable, height:auto
+ * is not. The child must own the overflow. */
+.g-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--g-t-enter) var(--g-ease-out), opacity var(--g-t) ease;
+}
+.g-reveal > * {
+  overflow: hidden;
+  min-height: 0;
+}
+.g-reveal[data-on='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}

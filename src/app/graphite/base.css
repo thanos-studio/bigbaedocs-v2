@@ -1,0 +1,33 @@
+/* ---------------------------------------------------------------- base ---- */
+
+body {
+  font-family: var(--g-font);
+  font-size: var(--g-fz-body);
+  color: var(--g-text);
+}
+
+/* Mantine/Tailwind resets can leave border-style unset, so a `border-width`
+ * with no `border-style` silently renders nothing. */
+*,
+*::before,
+*::after {
+  border-style: solid;
+  border-color: transparent;
+}
+
+/* No global `button:hover { opacity }` rule. It bleeds into every button in the
+ * app and then needs `opacity: 1 !important` everywhere to undo. Opt in per
+ * class instead. */
+button {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

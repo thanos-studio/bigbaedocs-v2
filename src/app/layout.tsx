@@ -1,5 +1,6 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import './graphite/index.css';
 import './globals.css';
 
 import type { Metadata } from 'next';

@@ -1,0 +1,119 @@
+/* ----------------------------------------------------------------- chip ---- */
+
+/* Selectable chip. Filled ink when picked. Drive with data-picked + aria-pressed. */
+.g-chip {
+  cursor: pointer;
+  background-color: var(--g-surface);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-r-pill);
+  color: var(--g-text);
+  font-size: var(--g-fz-body);
+  font-weight: 500;
+  transition: border-color var(--g-t-fast) ease, background-color var(--g-t-fast) ease,
+    color var(--g-t-fast) ease;
+}
+.g-chip:hover:not([data-picked='true']):not(:disabled) {
+  border-color: var(--g-border-hover);
+  background-color: var(--g-hover);
+}
+.g-chip:active:not([data-picked='true']):not(:disabled) {
+  background-color: var(--g-active);
+}
+.g-chip[data-picked='true'] {
+  border-color: var(--g-ink);
+  background-color: var(--g-ink);
+  color: var(--g-surface);
+}
+
+/* Secondary line inside a chip. At 72% white it recedes against the ink fill;
+ * a flat grey would turn muddy there. */
+.g-chip-meta {
+  color: var(--g-sub);
+}
+.g-chip[data-picked='true'] .g-chip-meta {
+  color: rgba(255, 255, 255, 0.72);
+}
+.g-chip[data-picked='true']:hover {
+  background-color: var(--g-ink-hover);
+  border-color: var(--g-ink-hover);
+}
+.g-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Additive chip - dashed border reads as "not a value yet, an invitation". */
+.g-chip-add {
+  cursor: pointer;
+  background-color: transparent;
+  border: 1px dashed var(--g-border-hover);
+  border-radius: var(--g-r-pill);
+  color: var(--g-sub);
+  font-size: var(--g-fz-body);
+  font-weight: 500;
+  transition: border-color var(--g-t-fast) ease, background-color var(--g-t-fast) ease,
+    color var(--g-t-fast) ease;
+}
+/* Ink tint rather than the opaque --g-hover: starting from transparent, an
+ * opaque grey lands only ~6 luminance from the page and reads as no change. */
+.g-chip-add:hover {
+  border-color: var(--g-ink);
+  background-color: var(--g-ink-tint);
+  color: var(--g-text);
+}
+.g-chip-add:active {
+  background-color: var(--g-ink-tint-strong);
+}
+
+/* Action chip - a suggestion or shortcut you click once. Squared, not pill. */
+.g-chip-action {
+  cursor: pointer;
+  background-color: var(--g-surface);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-r);
+  color: var(--g-label);
+  font-size: var(--g-fz-caption);
+  font-weight: 500;
+  transition: border-color var(--g-t-fast) ease, background-color var(--g-t-fast) ease;
+}
+.g-chip-action:hover:not(:disabled) {
+  border-color: var(--g-ink);
+  background-color: var(--g-hover);
+}
+.g-chip-action:active:not(:disabled) {
+  background-color: var(--g-active);
+}
+.g-chip-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Draggable chip - a persisted entity you can reorder or drag to a target. */
+.g-chip-drag {
+  cursor: grab;
+  background-color: var(--g-surface);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-r-pill);
+  will-change: transform;
+  transition: border-color var(--g-t-fast) ease, background-color var(--g-t-fast) ease,
+    transform var(--g-t-fast) ease, box-shadow var(--g-t-fast) ease,
+    margin var(--g-t) var(--g-ease);
+}
+.g-chip-drag:hover:not(.g-danger) {
+  border-color: var(--g-border-hover);
+  background-color: var(--g-soft);
+  transform: translateY(-1px);
+  box-shadow: var(--g-shadow-chip);
+}
+.g-chip-drag:active { cursor: grabbing; }
+/* The drag image is already rendered by the browser; hide the source row. */
+.g-chip-drag[data-dragging='true'] { display: none; }
+
+/* Armed-for-delete state. The shake says "this click destroys something". */
+.g-danger {
+  animation: g-shake 220ms ease-in-out infinite;
+  border-color: var(--g-danger);
+  background-color: var(--g-danger-bg);
+  color: var(--g-danger);
+}
+.g-danger * { color: var(--g-danger); }

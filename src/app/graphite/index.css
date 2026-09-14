@@ -1,0 +1,35 @@
+/*
+ * graphite - Korean SaaS design system
+ *
+ * The only file your app imports. Must come after Mantine's stylesheets, or
+ * Mantine's own class rules win and hover states silently revert:
+ *
+ *   import '@mantine/core/styles.css';
+ *   import 'graphite/css';
+ *
+ * Order below is load-bearing: tokens define the variables everything else
+ * reads, base resets, then component layers, then utilities last so they can
+ * override.
+ *
+ * Each file maps to one component, so there is never a question of which file
+ * owns a rule:
+ *
+ *   button.css   <- components/Button.tsx
+ *   chip.css     <- components/Chip.tsx
+ *   tab.css      <- components/Tabs.tsx
+ *   surface.css  <- components/Card.tsx, Option.tsx, Field.tsx
+ */
+
+@import './tokens.css';
+@import './base.css';
+@import './motion.css';
+
+@import './button.css';
+@import './chip.css';
+@import './tab.css';
+@import './surface.css';
+
+@import './scroll.css';
+@import './markdown.css';
+@import './route.css';
+@import './utility.css';

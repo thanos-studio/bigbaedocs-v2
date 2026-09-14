@@ -1,0 +1,43 @@
+/* ------------------------------------------------------------------ tab ---- */
+
+/* Segmented control. The moving pill is a separate absolutely-positioned div
+ * that slides; the buttons themselves never animate their own background.
+ * See references/components.md for the wrapper markup. */
+.g-tabs {
+  position: relative;
+  display: inline-flex;
+  background-color: var(--g-soft);
+  border-radius: var(--g-r-pill);
+  padding: 3px;
+}
+.g-tab-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  background-color: var(--g-ink);
+  border-radius: var(--g-r-pill);
+  transition: left 280ms var(--g-ease), width 280ms var(--g-ease);
+}
+.g-tab {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--g-r-pill);
+  font-size: var(--g-fz-body);
+  white-space: nowrap;
+  transition: color 200ms ease, background-color var(--g-t-fast) ease;
+}
+.g-tab[data-active='false'] {
+  color: var(--g-sub);
+  font-weight: 400;
+}
+.g-tab[data-active='false']:hover {
+  background-color: var(--g-ink-tint);
+  color: var(--g-text);
+}
+.g-tab[data-active='true'] {
+  color: var(--g-surface);
+  font-weight: 600;
+}

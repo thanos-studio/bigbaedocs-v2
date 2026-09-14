@@ -1,0 +1,90 @@
+/*
+ * graphite.css - Korean SaaS design preset (SUIT + Mantine)
+ *
+ * Import AFTER Mantine's stylesheets so the class layer wins:
+ *   import '@mantine/core/styles.css';
+ *   import 'graphite/graphite.css';
+ *
+ * Every colour lives in :root. Never hardcode a hex in a component - read the
+ * variable, or import the token from theme.ts. One neutral ramp only: mixing
+ * Tailwind slate + Tailwind gray + Mantine gray is what makes a UI look
+ * assembled from three different kits.
+ */
+
+:root {
+  /* Neutral ramp - the only greys allowed. */
+  --g-surface: #ffffff;
+  --g-page: #f0f2f5;
+  --g-soft: #f1f3f5;
+  --g-hover: #e9ecef;
+  --g-active: #dee2e6;
+  --g-border: #e5e7eb;
+  --g-border-soft: #f3f4f6;
+  --g-border-hover: #ced4da;
+
+  /* Text - descending emphasis. */
+  --g-text: #111827;
+  --g-sub: #404a57;
+  --g-label: #374151;
+  --g-muted: #4b5563;
+  --g-faint: #adb5bd;
+
+  /* Ink: the accent. Filled ink = selected/primary. Never a blue gradient. */
+  --g-ink: #212529;
+  --g-ink-hover: #343a40;
+  /* Tint for hover on transparent surfaces, where a solid grey would show its edges. */
+  /* Hover/press tint for transparent controls. Being alpha, one value works on
+   * both the page and a white card. Calibrated so the perceived step matches
+   * the opaque pair: 0.10 lands ~21/255 from the page background, the same
+   * distance as --g-hover from white, and 0.16 matches --g-active. Below ~0.08
+   * the change reads as nothing on #f0f2f5. */
+  --g-ink-tint: rgba(33, 37, 41, 0.1);
+  --g-ink-tint-strong: rgba(33, 37, 41, 0.16);
+
+  /* Semantic - reserved. Green means done, never "primary". */
+  --g-done: #15803d;
+  --g-done-bg: #e8f8ee;
+  --g-danger: #e03131;
+  --g-danger-bg: #fff5f5;
+  /* Red is high-chroma, so a tint that looks obviously pink still barely moves
+   * in luminance - #ffe3e3 measured only 8.8 from the page, below the ~12 needed
+   * to register. These land at 17.5 and 29.3, matching the ink pair's rhythm.
+   * Press must stay darker than hover. */
+  --g-danger-hover: #ffd8d8;
+  --g-danger-active: #ffc9c9;
+  --g-warn: #f59f00;
+  --g-warn-bg: #fff9ec;
+
+  /* Radius. 8 for rectangles, 999 for chips, 12 for panels, lg(16) for cards. */
+  --g-r-sm: 6px;
+  --g-r: 8px;
+  --g-r-panel: 12px;
+  --g-r-card: 16px;
+  --g-r-pill: 999px;
+
+  --g-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --g-shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --g-shadow-chip: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --g-ring: 0 0 0 3px rgba(148, 163, 184, 0.14);
+
+  /* Motion. Feedback is fast, entrances are unhurried, exits are faster than
+   * entrances - a leaving element should not make the user wait. */
+  --g-t-fast: 150ms;
+  --g-t: 180ms;
+  --g-t-enter: 260ms;
+  --g-t-exit: 160ms;
+  --g-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --g-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --g-ease-back: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* Type scale. Body is 14 - set it once here and inherit. */
+  --g-fz-display: 34px;
+  --g-fz-title: 24px;
+  --g-fz-heading: 21px;
+  --g-fz-section: 15px;
+  --g-fz-body: 14px;
+  --g-fz-caption: 13px;
+  --g-fz-fine: 12px;
+
+  --g-font: var(--font-suit), -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+}

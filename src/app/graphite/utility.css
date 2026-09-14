@@ -1,0 +1,9 @@
+/* ----------------------------------------------------------- responsive ---- */
+
+.g-desktop-only { display: flex; }
+.g-mobile-only { display: none; }
+
+@media (max-width: 768px) {
+  .g-desktop-only { display: none; }
+  .g-mobile-only { display: flex; }
+}
