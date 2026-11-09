@@ -1,9 +1,21 @@
+import {
+  HALF_DAY_DEFAULT_TITLE,
+  HALF_DAY_PERIOD,
+  appliedDates,
+  createEmptyHalfDay,
+  formatTableDate,
+  getReport,
+  isReportComplete,
+  type HalfDayData,
+} from './half-day';
+
 export type Student = { id: string; name: string; classInfo: string };
 
 export type TripStatus = 'in-progress' | 'done' | 'none';
 
 export type Trip = {
   id: string;
+  applicationType: ApplicationType;
   name: string;
   dateRange: string;
   student: string;
@@ -110,8 +122,18 @@ export type AgentModel = {
 };
 
 /** localStorage에 저장되는 신청서 초안 1건. */
+/**
+ * 신청서 종류. 같은 초안 저장소와 /c/[uuid] 경로를 쓰지만 화면, 에이전트, 문서 양식이 완전히 다르다.
+ * - trip: 일반 체험학습 신청서(장소·기간·계획) — 신청서와 보고서가 따로 있다.
+ * - half-day: 3학년 수능 이후 반일 교외체험학습 — 정해진 일정 위에서 날짜별로 신청하고 날짜별로 보고서를 낸다.
+ */
+export type ApplicationType = 'trip' | 'half-day';
+
 export type ApplicationDraft = {
   id: string;
+  applicationType: ApplicationType;
+  /** half-day 일 때만 쓴다. trip 초안에서는 빈 값이다. */
+  halfDay: HalfDayData;
   /** 선택된 학생 id 목록. 여러 명의 신청서를 한 번에 작성할 수 있다. */
   studentIds: string[];
   step: ApplicationStep;
@@ -176,6 +198,9 @@ export function toTrip(draft: ApplicationDraft, students: Student[]): Trip {
     .filter((student): student is Student => student !== undefined);
   const first = picked[0];
   const extra = picked.length > 1 ? ` 외 ${picked.length - 1}명` : '';
+
+  if (draft.applicationType === 'half-day') return toHalfDayTrip(draft, first ? `${first.name}${extra}` : '학생 미선택');
+
   const done = draft.step === 'document';
   const reportFilled = REPORT_STEPS.filter((step) => isReportStepFilled(step.key, draft)).length;
   const reportStatus: TripStatus =
@@ -183,11 +208,33 @@ export function toTrip(draft: ApplicationDraft, students: Student[]): Trip {
 
   return {
     id: draft.id,
+    applicationType: 'trip',
     name: draft.title.trim() !== '' ? draft.title : '제목 없는 신청서',
     dateRange: formatDateRangeShort(draft.startDate, draft.endDate) || '기간 미정',
     student: first ? `${first.name}${extra}` : '학생 미선택',
     applicationStatus: done ? 'done' : 'in-progress',
     reportStatus,
+    lastEdited: formatRelativeTime(draft.updatedAt),
+  };
+}
+
+/** 반일 교외체험학습은 신청서와 날짜별 보고서가 한 화면에서 진행되므로 카드에도 진행도를 함께 보여준다. */
+function toHalfDayTrip(draft: ApplicationDraft, student: string): Trip {
+  const dates = appliedDates(draft.halfDay);
+  const reportsDone = dates.length > 0 && dates.every((date) => isReportComplete(draft.halfDay, date));
+  const reportStarted = dates.some((date) => getReport(draft.halfDay, date).content.trim() !== '');
+  const doneCount = dates.filter((date) => isReportComplete(draft.halfDay, date)).length;
+
+  return {
+    id: draft.id,
+    applicationType: 'half-day',
+    name: draft.title.trim() !== '' ? draft.title : HALF_DAY_DEFAULT_TITLE,
+    dateRange: dates.length === 0 ? '신청 날짜 미정' : `${dates.map(formatTableDate).slice(0, 2).join(', ')}${dates.length > 2 ? ` 외 ${dates.length - 2}일` : ''}`,
+    student,
+    applicationStatus: draft.halfDay.step === 'reports' || draft.halfDay.step === 'review' ? 'done' : 'in-progress',
+    reportStatus: reportsDone ? 'done' : reportStarted ? 'in-progress' : 'none',
+    reportProgress: dates.length > 0 ? `보고서 ${doneCount}/${dates.length}` : undefined,
+    reportPercent: dates.length > 0 ? Math.round((doneCount / dates.length) * 100) : undefined,
     lastEdited: formatRelativeTime(draft.updatedAt),
   };
 }
@@ -273,16 +320,40 @@ export function isReportStepFilled(step: ReportStep, draft: ApplicationDraft): b
   }
 }
 
-export function createEmptyDraft(id: string): ApplicationDraft {
+/**
+ * 저장된 초안을 지금 형식으로 맞춘다. 빈 초안 위에 저장본을 덮어쓰되 두 가지를 보정한다.
+ * - 예전 버전은 반일 교외체험학습을 `preset: 'csat-half-day'` 로 저장했고 applicationType 이 없었다.
+ *   그대로 두면 기본값(trip)으로 열려 일반 체험학습 화면이 뜬다.
+ * - halfDay 가 일부 필드만 저장돼 있어도 나머지는 기본값으로 채운다.
+ */
+export function hydrateDraft(id: string, stored?: Partial<ApplicationDraft>): ApplicationDraft {
+  const legacyPreset = (stored as { preset?: unknown } | undefined)?.preset;
+  const applicationType: ApplicationType =
+    stored?.applicationType ?? (legacyPreset === 'csat-half-day' ? 'half-day' : 'trip');
+  const base = createEmptyDraft(id, applicationType);
+
+  return {
+    ...base,
+    ...stored,
+    id,
+    applicationType,
+    halfDay: { ...base.halfDay, ...stored?.halfDay },
+  };
+}
+
+export function createEmptyDraft(id: string, applicationType: ApplicationType = 'trip'): ApplicationDraft {
   const now = Date.now();
+  const halfDay = applicationType === 'half-day';
   return {
     id,
+    applicationType,
+    halfDay: createEmptyHalfDay(),
     studentIds: [],
     step: 'people',
-    title: '',
-    startDate: '',
-    endDate: '',
-    learningType: '',
+    title: halfDay ? HALF_DAY_DEFAULT_TITLE : '',
+    startDate: halfDay ? HALF_DAY_PERIOD.start : '',
+    endDate: halfDay ? HALF_DAY_PERIOD.end : '',
+    learningType: halfDay ? '진로 체험' : '',
     destination: '',
     placeRegion: 'domestic',
     placeAddress: '',

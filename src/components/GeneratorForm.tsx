@@ -29,13 +29,16 @@ import {
   IconUsers,
   IconChevronRight,
   IconArrowRight,
+  IconSchool,
   IconTrash,
 } from '@tabler/icons-react';
 import BrandMark from './BrandMark';
 import StudentModal from './StudentModal';
 import SettingsModal from './SettingsModal';
+import { removeChatsOf } from '@/lib/chat-store';
+import { deletePhotos } from '@/lib/photo-store';
 import { createId, useDrafts, useStudents } from '@/lib/storage';
-import { createEmptyDraft, toTrip, type Student, type Trip } from '@/lib/types';
+import { createEmptyDraft, hydrateDraft, toTrip, type Student, type Trip } from '@/lib/types';
 import { Button } from '@/lib/graphite/components';
 import { BORDER_HOVER, R, RAW, FZ, SHADOW } from '@/lib/graphite/theme';
 import {
@@ -326,7 +329,7 @@ export default function GeneratorForm() {
 
   const allTrips = Object.values(drafts)
     .sort((a, b) => b.updatedAt - a.updatedAt)
-    .map((draft) => toTrip({ ...createEmptyDraft(draft.id), ...draft }, studentList));
+    .map((draft) => toTrip(hydrateDraft(draft.id, draft), studentList));
 
   const tripCounts: Record<TabKey, number> = {
     all: allTrips.length,
@@ -347,7 +350,16 @@ export default function GeneratorForm() {
     router.push(`/c/${id}`);
   };
 
+  const handleStartCsatApplication = () => {
+    const id = createId();
+    setDrafts((prev) => ({ ...prev, [id]: createEmptyDraft(id, 'half-day') }));
+    router.push(`/c/${id}`);
+  };
+
   const handleDeleteTrip = (id: string) => {
+    removeChatsOf(id);
+    const photoIds = Object.values(drafts[id]?.halfDay?.reports ?? {}).flatMap((report) => (report.photos ?? []).map((photo) => photo.id));
+    void deletePhotos(photoIds);
     setDrafts((prev) => {
       const next = { ...prev };
       delete next[id];
@@ -356,13 +368,33 @@ export default function GeneratorForm() {
     setPendingDeleteTrip(null);
   };
 
-  const handleStartReport = () => {
-    if (allTrips.length === 0) {
-      setReportNotice('먼저 신청서를 작성해야 보고서를 쓸 수 있어요.');
+  /** 일반 체험학습만 별도 보고서 화면(/r)이 있다. 반일 교외체험학습은 신청서 화면 안의 '보고서' 단계에서 쓴다. */
+  const reportableTrips = allTrips.filter((trip) => trip.applicationType === 'trip');
+
+  const openReport = (trip: Trip) => {
+    if (trip.applicationType === 'trip') {
+      router.push(`/r/${trip.id}`);
       return;
     }
-    if (allTrips.length === 1) {
-      router.push(`/r/${allTrips[0].id}`);
+
+    setDrafts((prev) => {
+      const draft = prev[trip.id];
+      return draft ? { ...prev, [trip.id]: { ...draft, halfDay: { ...draft.halfDay, step: 'reports' } } } : prev;
+    });
+    router.push(`/c/${trip.id}`);
+  };
+
+  const handleStartReport = () => {
+    if (reportableTrips.length === 0) {
+      setReportNotice(
+        allTrips.length === 0
+          ? '먼저 신청서를 작성해야 보고서를 쓸 수 있어요.'
+          : '반일 교외체험학습 보고서는 신청서 화면의 "보고서" 단계에서 써요.'
+      );
+      return;
+    }
+    if (reportableTrips.length === 1) {
+      router.push(`/r/${reportableTrips[0].id}`);
       return;
     }
     openReportPicker();
@@ -471,6 +503,33 @@ export default function GeneratorForm() {
                   </div>
                   <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: REPORT_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <IconArrowRight size={16} color={REPORT} />
+                  </div>
+                </div>
+              </Paper>
+
+              {/* 3학년 수능 이후 반일 교외체험학습: 위 두 카드 아래에 한 줄로 */}
+              <Paper
+                withBorder
+                radius={CARD_RADIUS}
+                p="md"
+                className="card-hover"
+                component="button"
+                type="button"
+                onClick={handleStartCsatApplication}
+                style={{ gridColumn: '1 / -1', backgroundColor: 'white', boxShadow: CARD_SHADOW, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: SURFACE_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <IconSchool size={22} color={DARK} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text fw={700} style={{ fontSize: 15, color: TEXT, marginBottom: 3 }}>3학년 수능 이후 반일 교외체험학습 신청서</Text>
+                    <Text style={{ fontSize: 14, color: SUB, lineHeight: 1.5 }}>
+                      수능이 끝난 3학년이 반나절 다녀오는 체험이에요. 날짜와 장소만 알려주면 AI가 신청서를 작성해드립니다.
+                    </Text>
+                  </div>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: SURFACE_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <IconArrowRight size={16} color={DARK} />
                   </div>
                 </div>
               </Paper>
@@ -650,7 +709,14 @@ export default function GeneratorForm() {
                     {/* 상단: 문서 정보 */}
                     <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${BORDER_SOFT}` }}>
                       <Group justify="space-between" align="flex-start" gap={8} wrap="nowrap">
-                        <Text fw={700} style={{ fontSize: 15, color: TEXT, marginBottom: 6, flex: 1, minWidth: 0 }}>{trip.name}</Text>
+                        <Text fw={700} style={{ fontSize: 15, color: TEXT, marginBottom: 6, flex: 1, minWidth: 0 }}>
+                          {trip.name}
+                          {trip.applicationType === 'half-day' && (
+                            <span style={{ marginLeft: 8, borderRadius: R.pill, padding: '2px 8px', fontSize: 12, fontWeight: 500, color: SUB, backgroundColor: SURFACE_SOFT, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                              반일
+                            </span>
+                          )}
+                        </Text>
                         <Tooltip label="이 체험학습을 삭제해요" {...TOOLTIP_PROPS}>
                           <button
                             type="button"
@@ -739,7 +805,7 @@ export default function GeneratorForm() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/r/${trip.id}`)}
+                              onClick={() => openReport(trip)}
                               style={{ width: '100%' }}
                             >
                               문서 보기
@@ -747,11 +813,11 @@ export default function GeneratorForm() {
                           </>
                         ) : trip.reportStatus === 'in-progress' ? (
                           <>
-                            <Text style={{ fontSize: 13, color: ACCENT, fontWeight: 600, marginBottom: 8 }}>작성 중</Text>
+                            <Text style={{ fontSize: 13, color: ACCENT, fontWeight: 600, marginBottom: 8 }}>{trip.reportProgress ?? '작성 중'}</Text>
                             <Button
                               variant="solid"
                               size="sm"
-                              onClick={() => router.push(`/r/${trip.id}`)}
+                              onClick={() => openReport(trip)}
                               style={{ width: '100%' }}
                             >
                               계속 작성
@@ -763,7 +829,7 @@ export default function GeneratorForm() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/r/${trip.id}`)}
+                              onClick={() => openReport(trip)}
                               style={{ width: '100%' }}
                             >
                               작성하기
@@ -839,7 +905,7 @@ export default function GeneratorForm() {
           </div>
 
           <Stack gap={8}>
-            {allTrips.map((trip) => (
+            {reportableTrips.map((trip) => (
               <button
                 key={trip.id}
                 type="button"

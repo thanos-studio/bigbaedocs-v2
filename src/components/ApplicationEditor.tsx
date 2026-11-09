@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 import { useRouter } from 'next/navigation';
 import { Collapse, Group, Modal, Paper, Stack, Text, TextInput, Textarea, Tooltip, Transition } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -10,7 +10,6 @@ import {
   IconArrowLeft,
   IconCheck,
   IconUsers,
-  IconPencil,
   IconLoader2,
   IconPlus,
   IconMapPin,
@@ -72,6 +71,8 @@ import {
 import { BORDER_HOVER, FAINT, FZ, ON_INK_SUB, R, RAW } from '@/lib/graphite/theme';
 import { Button } from '@/lib/graphite/components';
 import AgentSidebar, { type WritingOptionState } from './AgentSidebar';
+import { DraftTitle, SaveIndicator, StepHeader } from './editor-chrome';
+import HalfDayEditor from './half-day/HalfDayEditor';
 import ShareModal from './ShareModal';
 import type { SharePayload } from '@/lib/share';
 import {
@@ -79,10 +80,11 @@ import {
   getApplicationPatches,
   toApplicationDraftContext,
   toDisplayMessages,
-  toUiMessages,
   type AgentModelCatalog,
 } from '@/lib/agent/client';
+import { chatStorageKey, CHAT_SAVE_FAILED_MESSAGE, useChatPersistence } from '@/lib/chat-store';
 import { placeCandidateListSchema } from '@/lib/agent/schema';
+import { useThinkingClock, withThinkingSeconds } from '@/lib/agent/use-thinking-clock';
 
 const TITLE_PLACEHOLDER = '제목 없는 신청서';
 
@@ -101,6 +103,9 @@ const AGENT_CHAT_TRANSPORT = new DefaultChatTransport({
       messages,
       draft: body?.draft,
       model: body?.model,
+      // 빠뜨리면 터보 모드·작성 옵션이 서버에 닿지 않고, 학생 목록 툴이 항상 빈 목록을 돌려준다.
+      options: body?.options,
+      availableStudents: body?.availableStudents,
     },
   }),
 });
@@ -109,140 +114,6 @@ const REGION_OPTIONS: { id: PlaceRegion; label: string; icon: typeof IconMapPin 
   { id: 'domestic', label: '국내', icon: IconMapPin },
   { id: 'overseas', label: '해외', icon: IconWorld },
 ];
-
-function DraftTitle({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editing) inputRef.current?.select();
-  }, [editing]);
-
-  const startEditing = () => {
-    setText(value);
-    setEditing(true);
-  };
-
-  const commit = () => {
-    onChange(text.trim());
-    setEditing(false);
-  };
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        value={text}
-        autoFocus
-        placeholder={TITLE_PLACEHOLDER}
-        aria-label="신청서 제목"
-        onChange={(e) => setText(e.currentTarget.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit();
-          }
-          if (e.key === 'Escape') {
-            setText(value);
-            setEditing(false);
-          }
-        }}
-        style={{
-          width: '100%',
-          fontSize: 24,
-          fontWeight: 700,
-          letterSpacing: -0.4,
-          color: TEXT,
-          border: 'none',
-          borderBottom: `2px solid ${DARK}`,
-          borderRadius: 0,
-          outline: 'none',
-          background: 'transparent',
-          padding: '2px 0',
-        }}
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={startEditing}
-      aria-label="신청서 제목 수정"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        maxWidth: '100%',
-        background: 'none',
-        border: 'none',
-        borderBottom: '2px solid transparent',
-        cursor: 'text',
-        padding: '2px 0',
-        textAlign: 'left',
-      }}
-      className="draft-title"
-    >
-      <Text
-        fw={700}
-        style={{
-          fontSize: 24,
-          letterSpacing: -0.4,
-          color: value.trim() === '' ? FAINT : TEXT,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {value.trim() === '' ? TITLE_PLACEHOLDER : value}
-      </Text>
-      <IconPencil size={15} color={SUB} style={{ flexShrink: 0 }} />
-    </button>
-  );
-}
-
-function StepHeader({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof IconUsers;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Group gap="sm" wrap="nowrap" mb={20}>
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          backgroundColor: SURFACE_SOFT,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={18} color={RAW.muted} />
-      </div>
-      <div>
-        <Text fw={700} style={{ fontSize: 15, color: TEXT }}>
-          {title}
-        </Text>
-        <Text style={{ fontSize: 14, color: SUB, marginTop: 2 }}>{description}</Text>
-      </div>
-    </Group>
-  );
-}
 
 function PolishButton({
   onClickAction,
@@ -356,26 +227,6 @@ function StepProgress({
   );
 }
 
-type MessageExtras = Pick<ChatMessage, 'reasoning' | 'toolCalls'>;
-
-function withRestoredExtras(
-  messages: ChatMessage[],
-  extras: Map<string, MessageExtras>
-): ChatMessage[] {
-  if (extras.size === 0) return messages;
-
-  return messages.map((message) => {
-    const saved = extras.get(message.id);
-    if (!saved) return message;
-
-    return {
-      ...message,
-      reasoning: message.reasoning ?? saved.reasoning,
-      toolCalls: message.toolCalls ?? saved.toolCalls,
-    };
-  });
-}
-
 type ModelNotice = { id: string; content: string; afterMessageId: string };
 
 function withModelNotices(messages: ChatMessage[], notices: ModelNotice[]): ChatMessage[] {
@@ -394,14 +245,25 @@ function withModelNotices(messages: ChatMessage[], notices: ModelNotice[]): Chat
   ]);
 }
 
+/**
+ * /c/[uuid] 의 진입점. 초안에 적힌 신청서 종류에 따라 화면이 완전히 달라진다.
+ * 저장소를 읽기 전에는 기본값(trip)이 보이므로, 읽은 뒤에 고른다. 안 그러면 반일 신청서를 열 때
+ * 일반 신청서 화면이 잠깐 떠서 대화 복원이 엉뚱한 쪽에서 시작된다.
+ */
 export default function ApplicationEditor({ uuid }: { uuid: string }) {
+  const { draft, hydrated } = useApplicationDraft(uuid);
+
+  if (!hydrated) return <div style={{ minHeight: '100vh', backgroundColor: PAGE_BG }} />;
+  return draft.applicationType === 'half-day' ? <HalfDayEditor uuid={uuid} /> : <TripApplicationEditor uuid={uuid} />;
+}
+
+function TripApplicationEditor({ uuid }: { uuid: string }) {
   const router = useRouter();
   const [students, setStudents] = useStudents();
   const { draft, hydrated, saveState, update } = useApplicationDraft(uuid);
   const [preferredModel] = usePreferredModel();
   const [studentModalOpened, { open: openStudentModal, close: closeStudentModal }] =
     useDisclosure(false);
-  const [thinkingElapsed, setThinkingElapsed] = useState(0);
   const [agentCatalog, setAgentCatalog] = useState<AgentModelCatalog | null>(null);
   const [agentCatalogError, setAgentCatalogError] = useState<string | null>(null);
   const [placeQuery, setPlaceQuery] = useState('');
@@ -434,13 +296,19 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
     },
     []
   );
-  const restoredChatRef = useRef(false);
-  const savedMessagesRef = useRef('');
-  const restoredExtrasRef = useRef(new Map<string, Pick<ChatMessage, 'reasoning' | 'toolCalls'>>());
   const appliedPatchIdsRef = useRef(new Set<string>());
+  const thinkingClock = useThinkingClock();
+  const {
+    begin: beginThinking,
+    elapsed: thinkingElapsed,
+    finish: finishThinking,
+    restore: restoreThinkingSeconds,
+    secondsById: thinkingSecondsById,
+  } = thinkingClock;
   const { clearError, error, messages, sendMessage, setMessages, status } = useChat({
     transport: AGENT_CHAT_TRANSPORT,
     throttle: 50,
+    onFinish: ({ message }) => finishThinking(message.id),
   });
   const thinking = status === 'submitted' || status === 'streaming';
 
@@ -620,49 +488,24 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
     }
   };
 
-  useEffect(() => {
-    if (!hydrated || restoredChatRef.current) return;
+  // 복원된 대화에 이미 폼에 반영된 변경(tool-update_application_draft)이 들어 있다. 다시 적용하면
+  // 그 뒤에 사용자가 고친 값을 덮어쓰므로, 적용된 것으로 미리 표시해 둔다.
+  const handleChatRestored = useCallback((restored: UIMessage[]) => {
+    getApplicationPatches(restored).forEach(({ id }) => appliedPatchIdsRef.current.add(id));
+  }, []);
+  const handleLegacyChatMigrated = useCallback(() => update({ messages: [] }), [update]);
 
-    draft.messages.forEach((message) => {
-      if (message.reasoning || message.toolCalls) {
-        restoredExtrasRef.current.set(message.id, {
-          reasoning: message.reasoning,
-          toolCalls: message.toolCalls,
-        });
-      }
-    });
-
-    const savedMessages = toUiMessages(draft.messages);
-    savedMessagesRef.current = JSON.stringify(
-      withRestoredExtras(toDisplayMessages(savedMessages), restoredExtrasRef.current)
-    );
-    setMessages(savedMessages);
-    restoredChatRef.current = true;
-  }, [draft.messages, hydrated, setMessages]);
-
-  useEffect(() => {
-    if (!hydrated || !restoredChatRef.current) return;
-
-    const displayMessages = withRestoredExtras(
-      toDisplayMessages(messages),
-      restoredExtrasRef.current
-    );
-
-    displayMessages.forEach((message) => {
-      if (message.reasoning || message.toolCalls) {
-        restoredExtrasRef.current.set(message.id, {
-          reasoning: message.reasoning,
-          toolCalls: message.toolCalls,
-        });
-      }
-    });
-
-    const serialized = JSON.stringify(displayMessages);
-    if (serialized === savedMessagesRef.current) return;
-
-    savedMessagesRef.current = serialized;
-    update({ messages: displayMessages });
-  }, [hydrated, messages, update]);
+  const { saveFailed: chatSaveFailed } = useChatPersistence({
+    storageKey: chatStorageKey('application', uuid),
+    messages,
+    setMessages,
+    busy: thinking,
+    secondsById: thinkingSecondsById,
+    restoreSeconds: restoreThinkingSeconds,
+    legacy: { messages: draft.messages, hydrated },
+    onRestored: handleChatRestored,
+    onLegacyMigrated: handleLegacyChatMigrated,
+  });
 
   useEffect(() => {
     const patches = getApplicationPatches(messages).filter(
@@ -673,14 +516,6 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
     patches.forEach(({ id }) => appliedPatchIdsRef.current.add(id));
     update(Object.assign({}, ...patches.map(({ patch }) => patch)));
   }, [messages, update]);
-
-  useEffect(() => {
-    if (!thinking) return;
-
-    const timer = setInterval(() => setThinkingElapsed((seconds) => seconds + 1), 1_000);
-
-    return () => clearInterval(timer);
-  }, [thinking]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1010,7 +845,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
     setPendingModelLabel(null);
     setLastSentModelId(draft.modelId);
 
-    setThinkingElapsed(0);
+    beginThinking();
     const transfer = new DataTransfer();
     files.forEach((file) => transfer.items.add(file));
     void sendMessage(
@@ -1084,31 +919,11 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
                   <IconArrowLeft size={16} />
                   나가기
                 </button>
-                {hydrated && saveState !== 'idle' && (
-                  <Tooltip
-                    label="서버에 저장되지 않고 브라우저에만 저장됩니다"
-                    {...TOOLTIP_PROPS}
-                    position="top-end"
-                  >
-                    <Group gap={5} style={{ cursor: 'default' }}>
-                      {saveState === 'saving' ? (
-                        <>
-                          <IconLoader2 size={14} color={SUB} className="spin" />
-                          <Text style={{ fontSize: 13, color: SUB }}>저장 중…</Text>
-                        </>
-                      ) : (
-                        <>
-                          <IconCheck size={14} color={DONE_COLOR} stroke={3} />
-                          <Text style={{ fontSize: 13, color: SUB }}>저장됨</Text>
-                        </>
-                      )}
-                    </Group>
-                  </Tooltip>
-                )}
+                {hydrated && <SaveIndicator state={saveState} />}
               </Group>
 
               <div style={{ marginTop: 18 }}>
-                <DraftTitle value={draft.title} onChange={(title) => update({ title })} />
+                <DraftTitle value={draft.title} onChange={(title) => update({ title })} placeholder={TITLE_PLACEHOLDER} />
               </div>
 
               <div style={{ marginTop: 28 }}>
@@ -2141,7 +1956,7 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
         >
           <AgentSidebar
             messages={withModelNotices(
-              withRestoredExtras(toDisplayMessages(messages), restoredExtrasRef.current),
+              withThinkingSeconds(toDisplayMessages(messages), thinkingSecondsById),
               modelNotices
             )}
             onSendAction={handleSend}
@@ -2149,9 +1964,8 @@ export default function ApplicationEditor({ uuid }: { uuid: string }) {
             modelId={draft.modelId}
             onModelChangeAction={handleModelChange}
             thinking={thinking}
-            thinkingSteps={[]}
             thinkingElapsed={thinkingElapsed}
-            errorMessage={error?.message ?? agentCatalogError}
+            errorMessage={error?.message ?? agentCatalogError ?? (chatSaveFailed ? CHAT_SAVE_FAILED_MESSAGE : null)}
           />
         </Paper>
       </div>

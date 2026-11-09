@@ -40,8 +40,16 @@ function buildPrintDocument(
   width: number,
   height: number
 ): string {
+  const safeTitle = title
+    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || '체험학습 문서';
+  const escapedTitle = safeTitle.replace(/[&<>"']/g, (char) => {
+    const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return entities[char];
+  });
   return (
-    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>` +
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapedTitle}</title><style>` +
     `@page { size: ${width}px ${height}px; margin: 0 }` +
     `html, body { margin: 0; padding: 0; background: white }` +
     `.page { width: ${width}px; height: ${height}px; overflow: hidden; page-break-after: always }` +

@@ -18,6 +18,19 @@ export function sanitizeProse(value: string): string {
     .trim();
 }
 
+/**
+ * 표 칸(체험 목적·장소·내용)용 정리. sanitizeProse 와 같지만 가운뎃점(·)은 "진로·직업"처럼 칸 안에서 흔히 쓰므로 남기고,
+ * 한 줄로 합치며 끝의 마침표를 뗀다.
+ */
+export function sanitizeCell(value: string): string {
+  const keep = '';
+  return sanitizeProse(value.replace(/·/g, keep))
+    .replace(new RegExp(keep, 'g'), '·')
+    .replace(/\s*\n+\s*/g, ' ')
+    .replace(/[.。]+$/, '')
+    .trim();
+}
+
 export const PROSE_FORMAT_RULES = [
   '실제 줄바꿈만 쓴다. 백슬래시 n 같은 문자를 그대로 쓰지 않는다.',
   '마크다운과 장식을 쓰지 않는다. 별표, 줄 앞 하이픈이나 불릿, 번호 목록 기호, 해시 제목, 백틱, 표를 모두 금지한다.',

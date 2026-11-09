@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 import { useRouter } from 'next/navigation';
 import { Group, Modal, Paper, Stack, Text, TextInput, Textarea, Tooltip } from '@mantine/core';
 import Image from 'next/image';
@@ -24,6 +24,7 @@ import {
   IconLock,
 } from '@tabler/icons-react';
 import { useStudents, useApplicationDraft, usePreferredModel, createId } from '@/lib/storage';
+import { SaveIndicator } from './editor-chrome';
 import { HwpxViewer } from './HwpxViewer';
 import {
   REPORT_STEPS,
@@ -60,9 +61,10 @@ import {
   getReportPatches,
   toApplicationDraftContext,
   toDisplayMessages,
-  toUiMessages,
   type AgentModelCatalog,
 } from '@/lib/agent/client';
+import { useThinkingClock, withThinkingSeconds } from '@/lib/agent/use-thinking-clock';
+import { chatStorageKey, CHAT_SAVE_FAILED_MESSAGE, useChatPersistence } from '@/lib/chat-store';
 
 const TITLE_PLACEHOLDER = '제목 없는 보고서';
 
@@ -331,26 +333,6 @@ function ReportProgress({
   );
 }
 
-type MessageExtras = Pick<ChatMessage, 'reasoning' | 'toolCalls'>;
-
-function withRestoredExtras(
-  messages: ChatMessage[],
-  extras: Map<string, MessageExtras>
-): ChatMessage[] {
-  if (extras.size === 0) return messages;
-
-  return messages.map((message) => {
-    const saved = extras.get(message.id);
-    if (!saved) return message;
-
-    return {
-      ...message,
-      reasoning: message.reasoning ?? saved.reasoning,
-      toolCalls: message.toolCalls ?? saved.toolCalls,
-    };
-  });
-}
-
 type ModelNotice = { id: string; content: string; afterMessageId: string };
 
 function withModelNotices(messages: ChatMessage[], notices: ModelNotice[]): ChatMessage[] {
@@ -374,7 +356,6 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
   const [students] = useStudents();
   const { draft, hydrated, saveState, update } = useApplicationDraft(uuid);
   const [preferredModel] = usePreferredModel();
-  const [thinkingElapsed, setThinkingElapsed] = useState(0);
   const [agentCatalog, setAgentCatalog] = useState<AgentModelCatalog | null>(null);
   const [agentCatalogError, setAgentCatalogError] = useState<string | null>(null);
   const [polishing, setPolishing] = useState<'experience' | 'reflection' | null>(null);
@@ -401,13 +382,18 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
     },
     []
   );
-  const restoredChatRef = useRef(false);
-  const savedMessagesRef = useRef('');
-  const restoredExtrasRef = useRef(new Map<string, Pick<ChatMessage, 'reasoning' | 'toolCalls'>>());
   const appliedPatchIdsRef = useRef(new Set<string>());
+  const {
+    begin: beginThinking,
+    elapsed: thinkingElapsed,
+    finish: finishThinking,
+    restore: restoreThinkingSeconds,
+    secondsById: thinkingSecondsById,
+  } = useThinkingClock();
   const { clearError, error, messages, sendMessage, setMessages, status } = useChat({
     transport: REPORT_CHAT_TRANSPORT,
     throttle: 50,
+    onFinish: ({ message }) => finishThinking(message.id),
   });
   const thinking = status === 'submitted' || status === 'streaming';
 
@@ -501,49 +487,23 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
     }
   };
 
-  useEffect(() => {
-    if (!hydrated || restoredChatRef.current) return;
+  // 복원된 대화에 이미 폼에 반영된 변경이 들어 있다. 다시 적용하면 그 뒤에 고친 값을 덮어쓰므로 적용된 것으로 표시해 둔다.
+  const handleChatRestored = useCallback((restored: UIMessage[]) => {
+    getReportPatches(restored).forEach(({ id }) => appliedPatchIdsRef.current.add(id));
+  }, []);
+  const handleLegacyChatMigrated = useCallback(() => update({ reportMessages: [] }), [update]);
 
-    draft.reportMessages.forEach((message) => {
-      if (message.reasoning || message.toolCalls) {
-        restoredExtrasRef.current.set(message.id, {
-          reasoning: message.reasoning,
-          toolCalls: message.toolCalls,
-        });
-      }
-    });
-
-    const savedMessages = toUiMessages(draft.reportMessages);
-    savedMessagesRef.current = JSON.stringify(
-      withRestoredExtras(toDisplayMessages(savedMessages), restoredExtrasRef.current)
-    );
-    setMessages(savedMessages);
-    restoredChatRef.current = true;
-  }, [draft.reportMessages, hydrated, setMessages]);
-
-  useEffect(() => {
-    if (!hydrated || !restoredChatRef.current) return;
-
-    const displayMessages = withRestoredExtras(
-      toDisplayMessages(messages),
-      restoredExtrasRef.current
-    );
-
-    displayMessages.forEach((message) => {
-      if (message.reasoning || message.toolCalls) {
-        restoredExtrasRef.current.set(message.id, {
-          reasoning: message.reasoning,
-          toolCalls: message.toolCalls,
-        });
-      }
-    });
-
-    const serialized = JSON.stringify(displayMessages);
-    if (serialized === savedMessagesRef.current) return;
-
-    savedMessagesRef.current = serialized;
-    update({ reportMessages: displayMessages });
-  }, [hydrated, messages, update]);
+  const { saveFailed: chatSaveFailed } = useChatPersistence({
+    storageKey: chatStorageKey('report', uuid),
+    messages,
+    setMessages,
+    busy: thinking,
+    secondsById: thinkingSecondsById,
+    restoreSeconds: restoreThinkingSeconds,
+    legacy: { messages: draft.reportMessages, hydrated },
+    onRestored: handleChatRestored,
+    onLegacyMigrated: handleLegacyChatMigrated,
+  });
 
   useEffect(() => {
     const patches = getReportPatches(messages).filter(
@@ -554,14 +514,6 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
     patches.forEach(({ id }) => appliedPatchIdsRef.current.add(id));
     update(Object.assign({}, ...patches.map(({ patch }) => patch)));
   }, [messages, update]);
-
-  useEffect(() => {
-    if (!thinking) return;
-
-    const timer = setInterval(() => setThinkingElapsed((seconds) => seconds + 1), 1_000);
-
-    return () => clearInterval(timer);
-  }, [thinking]);
 
   useEffect(() => {
     let cancelled = false;
@@ -825,7 +777,7 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
     setPendingModelLabel(null);
     setLastSentModelId(draft.modelId);
 
-    setThinkingElapsed(0);
+    beginThinking();
     const transfer = new DataTransfer();
     files.forEach((file) => transfer.items.add(file));
     void sendMessage(
@@ -891,27 +843,7 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
                 <IconArrowLeft size={16} />
                 나가기
               </button>
-              {hydrated && saveState !== 'idle' && (
-                <Tooltip
-                  label="서버에 저장되지 않고 브라우저에만 저장됩니다"
-                  {...TOOLTIP_PROPS}
-                  position="top-end"
-                >
-                  <Group gap={5} style={{ cursor: 'default' }}>
-                    {saveState === 'saving' ? (
-                      <>
-                        <IconLoader2 size={14} color={SUB} className="spin" />
-                        <Text style={{ fontSize: 13, color: SUB }}>저장 중…</Text>
-                      </>
-                    ) : (
-                      <>
-                        <IconCheck size={14} color={DONE_COLOR} stroke={3} />
-                        <Text style={{ fontSize: 13, color: SUB }}>저장됨</Text>
-                      </>
-                    )}
-                  </Group>
-                </Tooltip>
-              )}
+              {hydrated && <SaveIndicator state={saveState} />}
             </Group>
 
             <div style={{ marginTop: 18 }}>
@@ -1622,7 +1554,7 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
         >
           <AgentSidebar
             messages={withModelNotices(
-              withRestoredExtras(toDisplayMessages(messages), restoredExtrasRef.current),
+              withThinkingSeconds(toDisplayMessages(messages), thinkingSecondsById),
               modelNotices
             )}
             onSendAction={handleSend}
@@ -1630,9 +1562,8 @@ export default function ReportEditor({ uuid }: { uuid: string }) {
             modelId={draft.modelId}
             onModelChangeAction={handleModelChange}
             thinking={thinking}
-            thinkingSteps={[]}
             thinkingElapsed={thinkingElapsed}
-            errorMessage={error?.message ?? agentCatalogError}
+            errorMessage={error?.message ?? agentCatalogError ?? (chatSaveFailed ? CHAT_SAVE_FAILED_MESSAGE : null)}
             variant="report"
           />
         </Paper>
