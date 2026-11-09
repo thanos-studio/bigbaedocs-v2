@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { remarkLooseBold } from '@/lib/remark-loose-bold';
@@ -25,6 +25,7 @@ import {
   IconHelpCircle,
   IconArrowRightBar,
   IconPencil,
+  IconLink,
 } from '@tabler/icons-react';
 import {
   AGENT_NAME,
@@ -49,7 +50,7 @@ import { RAW, FZ, R, WARN_TEXT } from '@/lib/graphite/theme';
 import { Button } from '@/lib/graphite/components';
 import { createId } from '@/lib/storage';
 
-export type AgentVariant = 'application' | 'report';
+export type AgentVariant = 'application' | 'report' | 'half-day';
 
 type OnboardStep = { label: string; example?: string };
 
@@ -76,6 +77,23 @@ const VARIANT_COPY: Record<AgentVariant, VariantCopy> = {
       },
       { label: 'AI가 날짜·장소·목적을 채워요' },
       { label: '왼쪽에서 확인하고 고치면 끝' },
+    ],
+  },
+  'half-day': {
+    role: '반일 체험학습 도우미',
+    headline: '하고 싶은 체험만 말하면 신청서를 채워드려요',
+    suggestions: [
+      { label: '11/20이랑 11/23에 진로 박람회 가고 싶어요', icon: IconCalendarEvent },
+      { label: '박물관 큐레이터 직업 체험을 하고 싶어', icon: IconMapPin },
+      { label: '신청한 날 보고서 써줘', icon: IconSparkles },
+    ],
+    onboardSteps: [
+      {
+        label: '체험할 날짜와 하고 싶은 걸 말해주세요',
+        example: '예: "12/2에 네이버 사옥 견학, 12/4에는 용산 전자상가"',
+      },
+      { label: 'AI가 날짜별 목적·장소·내용을 채워요' },
+      { label: '왼쪽에서 확인하고, 다녀온 뒤 보고서도 써요' },
     ],
   },
   report: {
@@ -121,6 +139,8 @@ const SUPPORTED_ATTACHMENT_TYPES = new Set([
 
 const ANSWER_ROW_HEIGHT = 38;
 
+const URL_PATTERN = /https?:\/\/\S+/i;
+
 const ICON_BTN: CSSProperties = {
   width: 30,
   height: 30,
@@ -159,6 +179,8 @@ function ReasoningPanel({
   raw: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // 모델이 생각 내용을 내려주지 않아도 "N초 동안 생각함" 흔적은 남긴다. 펼칠 내용이 없을 땐 접힘 UI를 끈다.
+  const expandable = steps.length > 0;
 
   return (
     <div
@@ -173,7 +195,8 @@ function ReasoningPanel({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
+        aria-expanded={expandable ? open : undefined}
+        disabled={!expandable}
         className="reasoning-toggle"
         style={{
           display: 'flex',
@@ -181,7 +204,7 @@ function ReasoningPanel({
           gap: 7,
           width: '100%',
           border: 'none',
-          cursor: 'pointer',
+          cursor: expandable ? 'pointer' : 'default',
           padding: '9px 12px',
           textAlign: 'left',
         }}
@@ -195,18 +218,20 @@ function ReasoningPanel({
             </Text>
           )}
         </Text>
-        <IconChevronDown
-          size={14}
-          color={SUB}
-          style={{
-            flexShrink: 0,
-            transition: 'transform 180ms ease',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-          }}
-        />
+        {expandable && (
+          <IconChevronDown
+            size={14}
+            color={SUB}
+            style={{
+              flexShrink: 0,
+              transition: 'transform 180ms ease',
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          />
+        )}
       </button>
 
-      <Collapse expanded={open} transitionDuration={180}>
+      <Collapse expanded={expandable && open} transitionDuration={180}>
         {raw ? (
           <Text
             style={{
@@ -469,18 +494,40 @@ function QuestionCard({
   );
 }
 
+const LIVE_REASONING_CHARS = 200;
+const LIVE_THINKING_KEY = 'live-thinking';
+
+/** 지금 에이전트가 무엇을 하고 있는지. 실행 중인 툴이 있으면 그 이름, 없으면 답변 작성 여부. */
+function describeActivity(message: ChatMessage | undefined): string | null {
+  if (message?.role !== 'agent') return null;
+
+  const running = message.toolCalls?.findLast((call) => call.status === 'running');
+  if (running) return `${running.name} 중`;
+  if (message.content !== '') return '답변 쓰는 중';
+  return null;
+}
+
+/**
+ * 한 턴이 도는 동안 계속 떠 있는 "생각 중" 패널.
+ * 모델이 생각 내용을 내려주면 그 끝부분을 보여주고, 아니면 시간과 현재 작업만 보여준다.
+ */
 function ThinkingPanel({
-  steps,
+  reasoning,
   elapsed,
-  raw,
+  activity,
 }: {
-  steps: string[];
+  reasoning: string[];
   elapsed: number;
-  raw: boolean;
+  activity: string | null;
 }) {
+  const text = reasoning.join('\n').trim();
+  const tail = text.length > LIVE_REASONING_CHARS ? `…${text.slice(-LIVE_REASONING_CHARS)}` : text;
+
   return (
     <div
       className="fade-up"
+      role="status"
+      aria-live="polite"
       style={{
         maxWidth: '92%',
         borderRadius: 12,
@@ -495,33 +542,27 @@ function ThinkingPanel({
           생각 중
         </Text>
         <Text style={{ fontSize: 12, color: SUB }}>{elapsed}초</Text>
+        {activity && (
+          <Text key={activity} className="fade-up" style={{ fontSize: 12, color: SUB }}>
+            · {activity}
+          </Text>
+        )}
       </Group>
 
-      {steps.length > 0 &&
-        (raw ? (
-          <Text
-            className="fade-up"
-            style={{ fontSize: 12, lineHeight: 1.75, color: SUB, marginTop: 9 }}
-          >
-            {steps.join(' ')}
-          </Text>
-        ) : (
-          <Stack gap={4} mt={9}>
-            {steps.map((step, index) => (
-              <Text
-                key={`${step}-${index}`}
-                className="fade-up"
-                style={{
-                  fontSize: 12,
-                  lineHeight: 1.5,
-                  color: index === steps.length - 1 ? LABEL_COLOR : SUB,
-                }}
-              >
-                {step}
-              </Text>
-            ))}
-          </Stack>
-        ))}
+      {tail !== '' && (
+        <Text
+          style={{
+            fontSize: 12,
+            lineHeight: 1.6,
+            color: SUB,
+            marginTop: 8,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {tail}
+        </Text>
+      )}
     </div>
   );
 }
@@ -637,7 +678,6 @@ export default function AgentSidebar({
   modelId,
   onModelChangeAction,
   thinking,
-  thinkingSteps,
   thinkingElapsed,
   errorMessage,
   variant = 'application',
@@ -648,7 +688,6 @@ export default function AgentSidebar({
   modelId: AgentModelId;
   onModelChangeAction: (id: AgentModelId) => void;
   thinking: boolean;
-  thinkingSteps: string[];
   thinkingElapsed: number;
   errorMessage: string | null;
   variant?: AgentVariant;
@@ -671,10 +710,11 @@ export default function AgentSidebar({
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages.length, thinking, thinkingSteps.length]);
+  }, [messages.length, thinking]);
 
   const copy = VARIANT_COPY[variant];
   const trimmed = input.trim();
+  const hasLink = URL_PATTERN.test(input);
   const activeModel = models.find((model) => model.id === modelId) ?? null;
   const canSend = (trimmed !== '' || attachments.length > 0) && !thinking && activeModel !== null;
   const composerError = attachmentError ?? errorMessage;
@@ -690,6 +730,26 @@ export default function AgentSidebar({
               (call.candidates?.length ?? 0) > 0)
         )
       : undefined;
+
+  /**
+   * "생각 중" 패널은 목록 안에서 항상 같은 key 를 가진 형제 요소로 둔다.
+   * 답변이 시작되어 마지막 메시지가 user → agent 로 바뀌어도, 패널은 새 말풍선 바로 앞에 끼어들 뿐
+   * 위치가 바뀌지 않아 다시 마운트되지 않는다(깜빡임/사라짐 방지).
+   */
+  const withLivePanel = (node: ReactNode, index: number): ReactNode[] => {
+    if (!thinking || index !== messages.length - 1) return [node];
+
+    const livePanel = (
+      <ThinkingPanel
+        key={LIVE_THINKING_KEY}
+        reasoning={lastMessage?.role === 'agent' ? (lastMessage.reasoning ?? []) : []}
+        elapsed={thinkingElapsed}
+        activity={describeActivity(lastMessage)}
+      />
+    );
+
+    return lastMessage?.role === 'agent' ? [livePanel, node] : [node, livePanel];
+  };
 
   const handleAnswer = (answer: string) => {
     if (thinking || activeModel === null) return;
@@ -762,6 +822,28 @@ export default function AgentSidebar({
       e.preventDefault();
       handleSend();
     }
+  };
+
+  /**
+   * 클립보드에 파일이나 이미지가 있으면 첨부로 받고, 글자만 있으면 기본 붙여넣기를 그대로 둔다.
+   * 엑셀·워드에서 복사하면 글자와 함께 이미지 스냅샷이 오는데, 이때는 글자를 붙이는 게 맞다.
+   */
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(e.clipboardData.files);
+    if (files.length === 0) return;
+
+    const hasText = e.clipboardData.getData('text/plain').trim() !== '';
+    const isRichTextSnapshot =
+      hasText && e.clipboardData.types.includes('text/html') && files.every((file) => file.type.startsWith('image/'));
+    if (isRichTextSnapshot) return;
+
+    e.preventDefault();
+    // 스크린샷은 전부 "image.png" 로 오므로 첨부 칩에서 알아볼 수 있게 이름을 붙인다.
+    handleFiles(
+      files.map((file) =>
+        file.name === 'image.png' ? new File([file], '붙여넣은 이미지.png', { type: file.type }) : file
+      )
+    );
   };
 
   return (
@@ -917,9 +999,9 @@ export default function AgentSidebar({
           </div>
         ) : (
           <>
-            {messages.map((message, index) => {
+            {messages.flatMap((message, index) => {
               if (message.role === 'system') {
-                return (
+                return withLivePanel(
                   <div
                     key={message.id}
                     className="fade-up"
@@ -930,13 +1012,15 @@ export default function AgentSidebar({
                       {message.content}
                     </Text>
                     <div style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
-                  </div>
+                  </div>,
+                  index
                 );
               }
 
               const isUser = message.role === 'user';
               const isStreamingTail = thinking && !isUser && index === messages.length - 1;
-              return (
+              const hasReasoning = (message.reasoning?.length ?? 0) > 0;
+              return withLivePanel(
                 <div
                   key={message.id}
                   className="fade-up"
@@ -947,18 +1031,11 @@ export default function AgentSidebar({
                     gap: 6,
                   }}
                 >
-                  {!isUser && message.reasoning && message.reasoning.length > 0 && (
+                  {!isUser && !isStreamingTail && (hasReasoning || (message.thinkingSeconds ?? 0) > 0) && (
                     <ReasoningPanel
-                      steps={message.reasoning}
+                      steps={message.reasoning ?? []}
                       seconds={message.thinkingSeconds ?? 0}
                       raw={message.reasoningRaw ?? false}
-                    />
-                  )}
-                  {isStreamingTail && (
-                    <ThinkingPanel
-                      steps={thinkingSteps}
-                      elapsed={thinkingElapsed}
-                      raw={false}
                     />
                   )}
                   {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
@@ -1004,7 +1081,8 @@ export default function AgentSidebar({
                     )}
                   </div>
                   )}
-                </div>
+                </div>,
+                index
               );
             })}
 
@@ -1014,10 +1092,6 @@ export default function AgentSidebar({
                 onAnswerAction={handleAnswer}
                 disabled={thinking || activeModel === null}
               />
-            )}
-
-            {thinking && messages.at(-1)?.role !== 'agent' && (
-              <ThinkingPanel steps={thinkingSteps} elapsed={thinkingElapsed} raw={false} />
             )}
           </>
         )}
@@ -1054,6 +1128,16 @@ export default function AgentSidebar({
               </div>
             </div>
           </div>
+
+          {variant !== 'report' && (
+            <div className="link-hint" data-detected={hasLink} style={{ marginBottom: 10 }}>
+              <IconLink size={14} style={{ flexShrink: 0 }} />
+              <div className="link-hint-text">
+                <span data-state="idle">체험학습 안내 링크를 붙여넣으면 알아서 채워요</span>
+                <span data-state="detected">링크를 읽어서 신청서를 채워요</span>
+              </div>
+            </div>
+          )}
 
           {attachments.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
@@ -1177,6 +1261,7 @@ export default function AgentSidebar({
             value={input}
             onChange={(e) => setInput(e.currentTarget.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             aria-label={`${AGENT_NAME}에게 메시지 보내기`}
             styles={{ input: { fontSize: 14, color: TEXT, padding: 0 } }}
           />

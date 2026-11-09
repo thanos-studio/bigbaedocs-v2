@@ -1,7 +1,6 @@
 import {
   convertToModelMessages,
   createUIMessageStreamResponse,
-  safeValidateUIMessages,
   stepCountIs,
   streamText,
   toUIMessageStream,
@@ -9,6 +8,7 @@ import {
 
 import { AgentConfigurationError } from '@/lib/agent/config';
 import { getAgentModel } from '@/lib/agent/model';
+import { validateChatHistory } from '@/lib/agent/history';
 import { buildReportAgentInstructions } from '@/lib/agent/prompt';
 import { reportChatRequestSchema } from '@/lib/agent/schema';
 import { createReportTools } from '@/lib/agent/tools';
@@ -35,10 +35,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const { draft, model, options } = parsed.data;
   const tools = createReportTools(draft);
-  const checkedMessages = await safeValidateUIMessages({
-    messages: parsed.data.messages,
-    tools,
-  });
+  const checkedMessages = await validateChatHistory(parsed.data.messages, tools);
   if (!checkedMessages.success) {
     return jsonError('Messages do not match the AI SDK UI message protocol.', 400);
   }

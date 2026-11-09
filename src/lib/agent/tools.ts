@@ -5,14 +5,21 @@ import { z } from 'zod';
 
 import { parseDateExpression } from '@/lib/parse-date';
 import { searchPlaces } from '@/lib/places';
-import { sanitizeProse } from './writing';
+import type { PdfAttachment } from './attachments';
+import { createWebTools } from './web-tools';
+import { sanitizeCell, sanitizeProse } from './writing';
 
 import {
   applicationPatchSchema,
+  halfDayPlanPatchSchema,
+  halfDayReportPatchSchema,
   reportPatchSchema,
   type ApplicationDraftContext,
   type ApplicationPatch,
   type AvailableStudent,
+  type HalfDayDraftContext,
+  type HalfDayPlanPatch,
+  type HalfDayReportPatch,
   type ReportPatch,
 } from './schema';
 
@@ -102,12 +109,104 @@ export function createReportTools(draft: ApplicationDraftContext) {
     }),
   } satisfies ToolSet;
 }
+function sanitizeHalfDayPlan(patch: HalfDayPlanPatch): HalfDayPlanPatch {
+  return {
+    ...patch,
+    entries: patch.entries.map((entry) => ({
+      ...entry,
+      // 칸 내용을 쓰는데 신청 여부를 빠뜨리면, 쓴 것 자체가 신청 의사로 본다.
+      applied: entry.applied ?? (entry.purpose || entry.place || entry.content ? true : undefined),
+      ...(entry.purpose === undefined ? {} : { purpose: sanitizeCell(entry.purpose) }),
+      ...(entry.place === undefined ? {} : { place: sanitizeCell(entry.place) }),
+      ...(entry.content === undefined ? {} : { content: sanitizeCell(entry.content) }),
+    })),
+  };
+}
+
+function sanitizeHalfDayReport(patch: HalfDayReportPatch): HalfDayReportPatch {
+  return {
+    ...patch,
+    reports: patch.reports.map((report) => ({
+      ...report,
+      ...(report.content === undefined ? {} : { content: sanitizeProse(report.content) }),
+      ...(report.feeling === undefined ? {} : { feeling: sanitizeProse(report.feeling) }),
+    })),
+  };
+}
+
+/** 반일 교외체험학습 에이전트 툴: 날짜별 신청 내용과 날짜별 보고서를 채운다. */
+export function createHalfDayTools(
+  draft: HalfDayDraftContext,
+  availableStudents: AvailableStudent[] = [],
+  attachments: PdfAttachment[] = []
+) {
+  const tools = {
+    read_half_day_draft: tool({
+      description:
+        'Read the current half-day application: which dates are applied, the entries and the reports written so far.',
+      inputSchema: z.object({}),
+      execute: async () => draft,
+    }),
+    list_available_students: tool({
+      description:
+        'List every student registered in this browser, with id and class info. Call this before selecting students so you use real ids.',
+      inputSchema: z.object({}),
+      execute: async () => ({ students: availableStudents }),
+    }),
+    ask_half_day_question: tool({
+      description:
+        'Ask the student or guardian one focused question when something needed is missing, for example which dates they want or what they plan to do on a date.',
+      inputSchema: z.object({
+        question: z.string().trim().min(1).max(300),
+        field: z.enum(['students', 'dates', 'plan', 'report']).optional(),
+        choices: z.array(z.string().trim().min(1).max(80)).max(8).optional(),
+        freeText: z.boolean().optional(),
+        placeholder: z.string().trim().max(80).optional(),
+      }),
+      execute: async ({ question, field, choices, freeText, placeholder }) => ({
+        question,
+        field,
+        choices: choices ?? [],
+        freeText: freeText ?? false,
+        placeholder,
+      }),
+    }),
+    update_half_day_plan: tool({
+      description:
+        'Fill the application table. One entry per personal date: applied, purpose, place, content. Only the seven personal dates can be used; school-run days are fixed. Batch every date you can fill into one call. This returns a patch for the client to apply; it does not persist data itself.',
+      inputSchema: halfDayPlanPatchSchema,
+      execute: async (patch) => {
+        const sanitized = sanitizeHalfDayPlan(patch);
+        return {
+          patch: sanitized,
+          summary: sanitized.entries.map((entry) => entry.date).join(', '),
+        };
+      },
+    }),
+    update_half_day_report: tool({
+      description:
+        'Write the result report for applied dates: content (past tense), feeling, and optionally place, purpose and attachmentNote. One report per applied date, batched in one call. Works for any applied date; the date being in the future is not a reason to refuse. This returns a patch for the client to apply; it does not persist data itself.',
+      inputSchema: halfDayReportPatchSchema,
+      execute: async (patch) => {
+        const sanitized = sanitizeHalfDayReport(patch);
+        return {
+          patch: sanitized,
+          summary: sanitized.reports.map((report) => report.date).join(', '),
+        };
+      },
+    }),
+  } satisfies ToolSet;
+
+  return { ...tools, ...createWebTools(attachments) };
+}
+
 export function createApplicationTools(
   draft: ApplicationDraftContext,
   availableStudents: AvailableStudent[] = [],
-  turbo = false
+  turbo = false,
+  attachments: PdfAttachment[] = []
 ) {
-  return {
+  const tools = {
     read_application_draft: tool({
       description: 'Read the current application draft before answering questions about its contents.',
       inputSchema: z.object({}),
@@ -200,4 +299,6 @@ export function createApplicationTools(
       },
     }),
   } satisfies ToolSet;
+
+  return { ...tools, ...createWebTools(attachments) };
 }

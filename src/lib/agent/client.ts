@@ -1,6 +1,7 @@
 import type { UIMessage } from 'ai';
 import { z } from 'zod';
 
+import { HALF_DAY_STEPS, formatTableDate } from '@/lib/half-day';
 import { APPLICATION_STEPS, REPORT_STEPS } from '@/lib/types';
 import type {
   ApplicationDraft,
@@ -14,8 +15,13 @@ import {
   applicationPatchSchema,
   reportPatchSchema,
   applicationDraftSchema,
+  halfDayPlanPatchSchema,
+  halfDayReportPatchSchema,
   type ApplicationDraftContext,
   type ApplicationPatch,
+  type HalfDayDraftContext,
+  type HalfDayPlanPatch,
+  type HalfDayReportPatch,
   type ReportPatch,
 } from './schema';
 
@@ -23,6 +29,10 @@ type AgentToolPart = Extract<UIMessage['parts'][number], { type: `tool-${string}
 
 const TOOL_LABELS: Record<string, { kind: ToolCall['kind']; name: string; target?: string }> = {
   read_application_draft: { kind: 'tool', name: '신청서 확인' },
+  load_skill: { kind: 'skill', name: '스킬 불러오기' },
+  read_web_page: { kind: 'tool', name: '링크 읽기' },
+  web_search: { kind: 'tool', name: '웹 검색' },
+  parse_attachment: { kind: 'tool', name: '문서 읽기' },
   parse_date_expression: { kind: 'tool', name: '날짜 인식', target: '기간' },
   search_application_places: { kind: 'tool', name: '장소 검색', target: '장소' },
   propose_place_addresses: { kind: 'question', name: '주소 후보', target: '장소' },
@@ -32,7 +42,14 @@ const TOOL_LABELS: Record<string, { kind: ToolCall['kind']; name: string; target
   read_report_draft: { kind: 'tool', name: '보고서 확인' },
   ask_report_question: { kind: 'question', name: '확인 질문' },
   update_report_draft: { kind: 'tool', name: '보고서 반영' },
+  read_half_day_draft: { kind: 'tool', name: '신청서 확인' },
+  ask_half_day_question: { kind: 'question', name: '확인 질문' },
+  update_half_day_plan: { kind: 'tool', name: '신청서 반영' },
+  update_half_day_report: { kind: 'tool', name: '보고서 반영' },
 };
+
+const HALF_DAY_PATCH_TOOLS = ['update_half_day_plan', 'update_half_day_report'];
+const QUESTION_TOOLS = ['ask_application_question', 'ask_report_question', 'ask_half_day_question'];
 
 const PATCH_FIELD_LABELS: Record<string, string> = {
   studentIds: '학생',
@@ -71,11 +88,20 @@ function getPatchFields(part: AgentToolPart): string[] {
   }
 
   const report = reportPatchSchema.safeParse(part.output.patch);
-  if (!report.success) return [];
+  if (report.success) {
+    return Object.keys(report.data)
+      .filter((field) => field !== 'reportStep')
+      .map((field) => PATCH_FIELD_LABELS[field] ?? field);
+  }
 
-  return Object.keys(report.data)
-    .filter((field) => field !== 'reportStep')
-    .map((field) => PATCH_FIELD_LABELS[field] ?? field);
+  // 반일 교외체험학습: 어느 날짜가 바뀌었는지가 곧 바뀐 항목이다.
+  const plan = halfDayPlanPatchSchema.safeParse(part.output.patch);
+  if (plan.success) return plan.data.entries.map((entry) => formatTableDate(entry.date));
+
+  const halfDayReport = halfDayReportPatchSchema.safeParse(part.output.patch);
+  if (halfDayReport.success) return halfDayReport.data.reports.map((item) => `${formatTableDate(item.date)} 보고서`);
+
+  return [];
 }
 
 function getStepNavigation(part: AgentToolPart): string | null {
@@ -87,9 +113,14 @@ function getStepNavigation(part: AgentToolPart): string | null {
   }
 
   const report = reportPatchSchema.safeParse(part.output.patch);
-  if (!report.success || report.data.reportStep === undefined) return null;
+  if (report.success && report.data.reportStep !== undefined) {
+    return REPORT_STEPS.find((step) => step.key === report.data.reportStep)?.label ?? null;
+  }
 
-  return REPORT_STEPS.find((step) => step.key === report.data.reportStep)?.label ?? null;
+  const halfDayStep =
+    halfDayPlanPatchSchema.safeParse(part.output.patch).data?.step ??
+    halfDayReportPatchSchema.safeParse(part.output.patch).data?.step;
+  return halfDayStep === undefined ? null : (HALF_DAY_STEPS.find((step) => step.key === halfDayStep)?.label ?? null);
 }
 
 function getQuestionDetail(part: AgentToolPart): string | undefined {
@@ -103,9 +134,68 @@ function readString(source: unknown, key: string): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
+const PROVIDER_LABELS: Record<string, string> = {
+  exa: 'Exa',
+  firecrawl: 'Firecrawl',
+  direct: '직접 읽기',
+};
+
 function describeToolRun(toolId: string, part: AgentToolPart): string | undefined {
-  if (toolId === 'ask_application_question' || toolId === 'ask_report_question') {
+  if (QUESTION_TOOLS.includes(toolId)) {
     return getQuestionDetail(part);
+  }
+
+  if (toolId === 'load_skill') {
+    return readString(part.input, 'name');
+  }
+
+  if (toolId === 'parse_attachment') {
+    const name = readString(part.input, 'name');
+    if (part.state !== 'output-available' || !isRecord(part.output)) return name ? `${name} 읽는 중` : '문서 읽는 중';
+    return readString(part.output, 'error') ?? (name ? `${name} 읽음` : '문서 읽음');
+  }
+
+  if (toolId === 'read_web_page') {
+    const url = readString(part.input, 'url');
+    let host = url;
+    try {
+      host = url ? new URL(url).host : '링크 읽기';
+    } catch {
+      // URL이 아니면 그대로 표시한다.
+    }
+    if (part.state !== 'output-available' || !isRecord(part.output)) {
+      return host ? `${host} 읽는 중` : '링크 읽기';
+    }
+
+    const error = readString(part.output, 'error');
+    if (error) return `${host} → ${error}`;
+
+    const provider = PROVIDER_LABELS[readString(part.output, 'provider') ?? ''];
+    const title = readString(part.output, 'title') ?? readString(part.output, 'text')?.slice(0, 20) ?? '본문';
+    const subpages = Array.isArray(part.output.subpages) ? part.output.subpages.length : 0;
+    return `${host} → ${title}${subpages > 0 ? ` 외 ${subpages}쪽` : ''}${provider ? ` · ${provider}` : ''}`;
+  }
+
+  if (toolId === 'web_search') {
+    const query = readString(part.input, 'query');
+    if (part.state !== 'output-available' || !isRecord(part.output)) {
+      return query ? `"${query}" 검색` : '웹 검색';
+    }
+
+    const error = readString(part.output, 'error');
+    if (error) return query ? `"${query}" → ${error}` : error;
+
+    const results = Array.isArray(part.output.results) ? part.output.results : [];
+    const titles = results
+      .map((result) => readString(result, 'title'))
+      .filter((title): title is string => title !== undefined);
+
+    if (titles.length === 0) return query ? `"${query}" 검색 결과 없음` : '웹 검색';
+
+    const provider = PROVIDER_LABELS[readString(part.output, 'provider') ?? ''];
+    const shown = titles.slice(0, 2).join(', ');
+    const suffix = titles.length > 2 ? ` 외 ${titles.length - 2}건` : '';
+    return `${query ? `"${query}" → ` : ''}${shown}${suffix}${provider ? ` · ${provider}` : ''}`;
   }
 
   if (toolId === 'parse_date_expression') {
@@ -199,14 +289,18 @@ function getToolCalls(message: UIMessage): ToolCall[] {
 
     const toolId = part.type.slice('tool-'.length);
     const definition = TOOL_LABELS[toolId] ?? { kind: 'tool' as const, name: toolId };
+    // 웹 툴은 실패해도 예외 대신 { error } 를 돌려준다. 그래도 체크 표시가 아니라 오류로 보여준다.
+    const reportedError =
+      part.state === 'output-available' && isRecord(part.output) && readString(part.output, 'error') !== undefined;
     const status =
-      part.state === 'output-available'
+      part.state === 'output-available' && !reportedError
         ? 'done'
-        : part.state === 'output-error'
+        : part.state === 'output-error' || reportedError
           ? 'error'
           : 'running';
-    const isPatch = toolId === 'update_application_draft' || toolId === 'update_report_draft';
-    const isQuestion = toolId === 'ask_application_question' || toolId === 'ask_report_question';
+    const isPatch =
+      toolId === 'update_application_draft' || toolId === 'update_report_draft' || HALF_DAY_PATCH_TOOLS.includes(toolId);
+    const isQuestion = QUESTION_TOOLS.includes(toolId);
     const isPlaceProposal = toolId === 'propose_place_addresses';
     const fields = isPatch ? getPatchFields(part) : [];
     const stepLabel = isPatch ? getStepNavigation(part) : null;
@@ -372,6 +466,45 @@ export function getReportPatches(messages: UIMessage[]): {
       return parsed.success ? [{ id: part.toolCallId, patch: parsed.data }] : [];
     })
   );
+}
+
+export type HalfDayPatch =
+  | { id: string; kind: 'plan'; patch: HalfDayPlanPatch }
+  | { id: string; kind: 'report'; patch: HalfDayReportPatch };
+
+/** 완료된 반일 에이전트 툴 호출에서 폼에 반영할 변경을 꺼낸다. 순서는 대화 순서를 따른다. */
+export function getHalfDayPatches(messages: UIMessage[]): HalfDayPatch[] {
+  return messages.flatMap((message) =>
+    message.parts.flatMap((part): HalfDayPatch[] => {
+      if (!isToolPart(part) || part.state !== 'output-available' || !isRecord(part.output)) return [];
+
+      if (part.type === 'tool-update_half_day_plan') {
+        const parsed = halfDayPlanPatchSchema.safeParse(part.output.patch);
+        return parsed.success ? [{ id: part.toolCallId, kind: 'plan', patch: parsed.data }] : [];
+      }
+      if (part.type === 'tool-update_half_day_report') {
+        const parsed = halfDayReportPatchSchema.safeParse(part.output.patch);
+        return parsed.success ? [{ id: part.toolCallId, kind: 'report', patch: parsed.data }] : [];
+      }
+      return [];
+    })
+  );
+}
+
+/** 에이전트에게 보낼 반일 신청서 현황. 폼과 같은 값을 그대로 보낸다. */
+export function toHalfDayContext(draft: ApplicationDraft): HalfDayDraftContext {
+  return {
+    id: draft.id,
+    title: draft.title,
+    studentIds: draft.studentIds,
+    // 사진 참조는 에이전트가 쓸 일이 없다. 글만 보낸다.
+    halfDay: {
+      ...draft.halfDay,
+      reports: Object.fromEntries(
+        Object.entries(draft.halfDay.reports).map(([date, report]) => [date, { ...report, photos: undefined }])
+      ),
+    },
+  };
 }
 
 export const agentModelCatalogSchema = z

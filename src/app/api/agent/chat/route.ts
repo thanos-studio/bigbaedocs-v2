@@ -1,7 +1,6 @@
 import {
   convertToModelMessages,
   createUIMessageStreamResponse,
-  safeValidateUIMessages,
   stepCountIs,
   streamText,
   toUIMessageStream,
@@ -14,6 +13,8 @@ import { getAgentModel } from '@/lib/agent/model';
 import { buildApplicationAgentInstructions } from '@/lib/agent/prompt';
 import { agentChatRequestSchema } from '@/lib/agent/schema';
 import { createApplicationTools } from '@/lib/agent/tools';
+import { extractPdfAttachments } from '@/lib/agent/attachments';
+import { validateChatHistory } from '@/lib/agent/history';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,11 +50,14 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const { draft, model, options, availableStudents } = parsed.data;
-  const tools = createApplicationTools(draft, availableStudents ?? [], options?.turbo ?? false);
-  const checkedMessages = await safeValidateUIMessages({
-    messages: parsed.data.messages,
-    tools,
-  });
+  const pdfAttachments = extractPdfAttachments(parsed.data.messages);
+  const tools = createApplicationTools(
+    draft,
+    availableStudents ?? [],
+    options?.turbo ?? false,
+    pdfAttachments
+  );
+  const checkedMessages = await validateChatHistory(parsed.data.messages, tools);
   if (!checkedMessages.success) {
     return jsonError('Messages do not match the AI SDK UI message protocol.', 400);
   }
@@ -64,7 +68,11 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const result = streamText({
       model: getAgentModel(model),
-      instructions: buildApplicationAgentInstructions(draft, options),
+      instructions: buildApplicationAgentInstructions(
+        draft,
+        options,
+        pdfAttachments.map((file) => file.name)
+      ),
       messages: await convertToModelMessages(checkedMessages.data),
       tools,
       stopWhen: stepCountIs(options?.turbo ? 12 : 5),
